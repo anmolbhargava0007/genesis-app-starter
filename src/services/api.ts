@@ -24,7 +24,7 @@ export const workspaceApi = {
     return handleResponse<ApiResponse<Workspace>>(response);
   },
 
-  create: async (workspace: Workspace): Promise<ApiResponse<Workspace>> => {
+  create: async (workspace: Workspace & { session_id?: string }): Promise<ApiResponse<Workspace>> => {
     const response = await fetch(`${API_BASE_URL}/api/v1/workspaces`, {
       method: "POST",
       headers: {
@@ -34,6 +34,8 @@ export const workspaceApi = {
         ...workspace,
         user_id: workspace.user_id || DEFAULT_USER_ID,
         is_active: true,
+        // Include session_id if provided
+        ...(workspace.session_id && { session_id: workspace.session_id }),
       }),
     });
     return handleResponse<ApiResponse<Workspace>>(response);

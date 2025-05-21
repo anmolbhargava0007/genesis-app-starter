@@ -4,6 +4,7 @@ export interface Workspace {
   ws_name: string;
   user_id: number;
   is_active: boolean;
+  session_id?: string;
 }
 
 export interface Document {

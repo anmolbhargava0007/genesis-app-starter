@@ -5,13 +5,14 @@ import {
   LLM_API_BASE_URL, 
   LLM_START_SESSION_ENDPOINT, 
   LLM_UPLOAD_PDF_ENDPOINT, 
-  LLM_ASK_QUESTION_ENDPOINT 
+  LLM_ASK_QUESTION_ENDPOINT,
+  LLM_LIST_FILES_ENDPOINT
 } from "@/constants/api";
 
 export const llmApi = {
   startSession: async (): Promise<{ success: boolean; session_id?: string }> => {
     try {
-      // Changed from POST to GET request
+      // This is a GET request
       const response = await fetch(LLM_START_SESSION_ENDPOINT, {
         method: "GET",
       });
@@ -108,4 +109,25 @@ export const llmApi = {
       };
     }
   },
+
+  listFiles: async (sessionId: string): Promise<{ success: boolean; files?: string[] }> => {
+    try {
+      const response = await fetch(`${LLM_LIST_FILES_ENDPOINT}${sessionId}`, {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch file list from LLM API");
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        files: data.files || []
+      };
+    } catch (error) {
+      console.error("Error fetching file list from LLM API:", error);
+      return { success: false, files: [] };
+    }
+  }
 };

@@ -37,6 +37,7 @@ interface WorkspaceContextType {
   loadPromptHistory: (prompt: ChatPrompt) => void;
   chatMessages: ChatData;
   currentSessionDocuments: string[];
+  listUploadedFiles: (sessionId: string) => Promise<string[]>;
 }
 
 interface SessionIdMap {
@@ -90,16 +91,50 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (selectedWorkspace?.ws_id && user?.user_id) {
       loadLatestChatHistory(selectedWorkspace.ws_id, user.user_id);
+      
+      // If workspace has a session_id and is not yet in sessionIds, add it
+      if (selectedWorkspace.session_id && selectedWorkspace.ws_id) {
+        if (!sessionIds[selectedWorkspace.ws_id]) {
+          setSessionIds(prev => ({
+            ...prev,
+            [selectedWorkspace.ws_id!]: selectedWorkspace.session_id!
+          }));
+        }
+        
+        // Load session documents for the workspace
+        if (selectedWorkspace.session_id) {
+          listUploadedFiles(selectedWorkspace.session_id)
+            .then(files => {
+              if (files && files.length > 0) {
+                setSessionDocuments(prev => ({
+                  ...prev,
+                  [selectedWorkspace.ws_id!]: files
+                }));
+                setCurrentSessionDocuments(files);
+              }
+            })
+            .catch(err => {
+              console.error("Error loading session files:", err);
+            });
+        }
+      }
     }
-  }, [selectedWorkspace?.ws_id, user?.user_id]);
+  }, [selectedWorkspace?.ws_id, user?.user_id, selectedWorkspace?.session_id]);
 
   // Load session documents when session changes
   useEffect(() => {
-    if (selectedWorkspace?.ws_id && sessionIds[selectedWorkspace.ws_id]) {
-      const docs = sessionDocuments[selectedWorkspace.ws_id] || [];
-      setCurrentSessionDocuments(docs);
+    if (selectedWorkspace?.ws_id && selectedWorkspace?.session_id) {
+      listUploadedFiles(selectedWorkspace.session_id)
+        .then(files => {
+          if (files && files.length > 0) {
+            setCurrentSessionDocuments(files);
+          }
+        })
+        .catch(err => {
+          console.error("Error loading session files:", err);
+        });
     }
-  }, [selectedWorkspace?.ws_id, sessionIds, sessionDocuments]);
+  }, [selectedWorkspace?.ws_id, selectedWorkspace?.session_id]);
 
   const loadLatestChatHistory = async (wsId: number, userId: number) => {
     try {
@@ -300,6 +335,19 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const listUploadedFiles = async (sessionId: string): Promise<string[]> => {
+    try {
+      const result = await llmApi.listFiles(sessionId);
+      if (result.success && result.files) {
+        return result.files;
+      }
+      return [];
+    } catch (error) {
+      console.error("Failed to list uploaded files:", error);
+      return [];
+    }
+  };
+
   const refreshWorkspaces = async (userId?: number) => {
     if (!user?.user_id) return;
 
@@ -323,6 +371,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               const docs = await documentApi.getAll(workspace.ws_id);
               workspace.documents = docs;
               workspace.fileCount = docs.length;
+              
+              // If workspace has a session_id, store it
+              if (workspace.session_id && workspace.ws_id) {
+                setSessionIds(prev => ({
+                  ...prev,
+                  [workspace.ws_id!]: workspace.session_id!
+                }));
+              }
             }
           } catch (err) {
             console.error(
@@ -367,32 +423,37 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      // First, create a session with the LLM API
+      const sessionResponse = await llmApi.startSession();
+      
+      if (!sessionResponse.success || !sessionResponse.session_id) {
+        toast.error("Failed to initialize the AI session");
+        return;
+      }
+      
+      const sessionId = sessionResponse.session_id;
+      
+      console.log(`Created new session ID: ${sessionId}`);
+
+      // Then, create the workspace in the backend, including the session_id
       const newWorkspace: Workspace = {
         ws_name: name,
         user_id: user.user_id,
         is_active: true,
+        session_id: sessionId
       };
 
-      // First, create the workspace in the backend
       const response = await workspaceApi.create(newWorkspace);
       
-      if (response.success) {
-        // Now create a session with the LLM API
-        const sessionResponse = await llmApi.startSession();
+      if (response.success && response.data.ws_id) {
+        // Save the session ID for this workspace
+        setSessionIds(prev => ({
+          ...prev,
+          [response.data.ws_id]: sessionId
+        }));
         
-        if (sessionResponse.success && sessionResponse.session_id && response.data.ws_id) {
-          // Save the session ID for this workspace
-          setSessionIds(prev => ({
-            ...prev,
-            [response.data.ws_id]: sessionResponse.session_id as string
-          }));
-          
-          console.log(`Created new session ID for workspace ${response.data.ws_id}: ${sessionResponse.session_id}`);
-          toast.success("Workspace created successfully");
-        } else {
-          console.error("Failed to start LLM session");
-          toast.error("Workspace created, but failed to initialize the AI session");
-        }
+        console.log(`Associated session ID ${sessionId} with workspace ${response.data.ws_id}`);
+        toast.success("Workspace created successfully");
         
         await refreshWorkspaces();
       } else {
@@ -494,22 +555,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Get the session ID for this workspace
-      let sessionId = selectedWorkspace.ws_id ? sessionIds[selectedWorkspace.ws_id] : undefined;
-      
-      // If we don't have a session ID yet, create one
-      if (!sessionId && selectedWorkspace.ws_id) {
-        const sessionResponse = await llmApi.startSession();
-        if (sessionResponse.success && sessionResponse.session_id) {
-          sessionId = sessionResponse.session_id;
-          setSessionIds(prev => ({
-            ...prev,
-            [selectedWorkspace.ws_id!]: sessionId!
-          }));
-        }
-      }
+      let sessionId = selectedWorkspace.ws_id ? 
+        (selectedWorkspace.session_id || sessionIds[selectedWorkspace.ws_id]) : 
+        undefined;
       
       if (!sessionId) {
-        toast.error("Failed to create a session for this workspace");
+        toast.error("No session found for this workspace");
         return false;
       }
       
@@ -521,16 +572,27 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           toast.success(result.message || "Document uploaded successfully to AI");
           
           // Update session documents
-          setSessionDocuments(prev => {
-            const currentDocs = prev[selectedWorkspace.ws_id!] || [];
-            return {
-              ...prev,
-              [selectedWorkspace.ws_id!]: [...currentDocs, file.name]
-            };
-          });
-          
-          // Update current session documents
-          setCurrentSessionDocuments(prevDocs => [...prevDocs, file.name]);
+          if (selectedWorkspace.ws_id) {
+            setSessionDocuments(prev => {
+              const currentDocs = prev[selectedWorkspace.ws_id!] || [];
+              const newDocs = [...currentDocs];
+              if (!currentDocs.includes(file.name)) {
+                newDocs.push(file.name);
+              }
+              return {
+                ...prev,
+                [selectedWorkspace.ws_id!]: newDocs
+              };
+            });
+            
+            // Update current session documents
+            setCurrentSessionDocuments(prevDocs => {
+              if (!prevDocs.includes(file.name)) {
+                return [...prevDocs, file.name];
+              }
+              return prevDocs;
+            });
+          }
         } else {
           console.error("Failed to upload to LLM API");
           toast.error("Failed to process document with AI");
@@ -615,7 +677,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       });
 
       // Get session ID for this workspace
-      const sessionId = sessionIds[workspaceId];
+      const workspace = workspaces.find(w => w.ws_id === workspaceId);
+      const sessionId = workspace?.session_id || sessionIds[workspaceId];
       
       if (!sessionId) {
         throw new Error("No session found. Please upload a document first.");
@@ -702,6 +765,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     loadPromptHistory,
     chatMessages,
     currentSessionDocuments,
+    listUploadedFiles
   };
 
   return (
