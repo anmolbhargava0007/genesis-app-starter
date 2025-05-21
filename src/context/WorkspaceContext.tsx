@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -55,6 +56,9 @@ const DEFAULT_MODEL_NAME = "llama3.2:latest";
 const DEFAULT_TEMPERATURE = 1.0;
 const DEFAULT_TOKEN_USAGE = 100;
 
+// Local storage key for session IDs
+const SESSION_IDS_STORAGE_KEY = 'workspace_session_ids';
+
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [workspaces, setWorkspaces] = useState<WorkspaceWithDocuments[]>([]);
@@ -63,9 +67,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatData>({});
-  const [sessionIds, setSessionIds] = useState<SessionIdMap>({});
+  const [sessionIds, setSessionIds] = useState<SessionIdMap>(() => {
+    // Initialize from localStorage if available
+    const savedSessionIds = localStorage.getItem(SESSION_IDS_STORAGE_KEY);
+    return savedSessionIds ? JSON.parse(savedSessionIds) : {};
+  });
   const [sessionDocuments, setSessionDocuments] = useState<SessionDocumentsMap>({});
   const [currentSessionDocuments, setCurrentSessionDocuments] = useState<string[]>([]);
+
+  // Save session IDs to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(SESSION_IDS_STORAGE_KEY, JSON.stringify(sessionIds));
+  }, [sessionIds]);
 
   useEffect(() => {
     if (user?.user_id) {
