@@ -11,8 +11,9 @@ import {
 export const llmApi = {
   startSession: async (): Promise<{ success: boolean; session_id?: string }> => {
     try {
+      // Changed from POST to GET request
       const response = await fetch(LLM_START_SESSION_ENDPOINT, {
-        method: "POST",
+        method: "GET",
       });
 
       if (!response.ok) {
