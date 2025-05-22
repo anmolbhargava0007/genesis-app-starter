@@ -166,7 +166,7 @@ export const llmApi = {
       const data = await response.json();
       return {
         success: true,
-        message: data.message,
+        message: data.message || "URL scraped successfully",
         chunks: data.chunks
       };
     } catch (error) {

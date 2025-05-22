@@ -126,30 +126,30 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   }, [selectedWorkspace?.ws_id, user?.user_id, selectedWorkspace?.session_id]);
 
   // Load session documents when session changes
-useEffect(() => {
-  const loadDocumentsForWorkspace = async () => {
-    if (selectedWorkspace?.ws_id && selectedWorkspace?.session_id) {
-      try {
-        const files = await listUploadedFiles(selectedWorkspace.session_id);
-        const docs = files && files.length > 0 ? files : [];
-        
-        setSessionDocuments((prev) => ({
-          ...prev,
-          [selectedWorkspace.ws_id!]: docs,
-        }));
+  useEffect(() => {
+    const loadDocumentsForWorkspace = async () => {
+      if (selectedWorkspace?.ws_id && selectedWorkspace?.session_id) {
+        try {
+          const files = await listUploadedFiles(selectedWorkspace.session_id);
+          const docs = files && files.length > 0 ? files : [];
+          
+          setSessionDocuments((prev) => ({
+            ...prev,
+            [selectedWorkspace.ws_id!]: docs,
+          }));
 
-        setCurrentSessionDocuments(docs); // Always update, even if empty
-      } catch (err) {
-        console.error("Error loading session files:", err);
-        setCurrentSessionDocuments([]); // Reset to empty on error
+          setCurrentSessionDocuments(docs); // Always update, even if empty
+        } catch (err) {
+          console.error("Error loading session files:", err);
+          setCurrentSessionDocuments([]); // Reset to empty on error
+        }
+      } else {
+        setCurrentSessionDocuments([]); // Reset if no selected workspace
       }
-    } else {
-      setCurrentSessionDocuments([]); // Reset if no selected workspace
-    }
-  };
+    };
 
-  loadDocumentsForWorkspace();
-}, [selectedWorkspace?.ws_id, selectedWorkspace?.session_id]);
+    loadDocumentsForWorkspace();
+  }, [selectedWorkspace?.ws_id, selectedWorkspace?.session_id]);
 
 
   const loadLatestChatHistory = async (wsId: number, userId: number) => {
@@ -229,10 +229,12 @@ useEffect(() => {
           }));
 
           // Extract document names (mock implementation)
+          const documents = extractDocumentNamesFromPrompts(chatPrompts);
           setSessionDocuments((prev) => ({
             ...prev,
-            [wsId]: extractDocumentNamesFromPrompts(chatPrompts),
+            [wsId]: documents,
           }));
+          setCurrentSessionDocuments(documents);
 
           console.log(
             `Loaded ${formattedMessages.length} messages for workspace ${wsId}`
@@ -327,7 +329,7 @@ useEffect(() => {
 
       // Look for URLs mentioned in the response
       if (responseText.includes('http://') || responseText.includes('https://')) {
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const urlRegex = /(https?:\/\/[^\s"']+)/g;
         const matches = responseText.match(urlRegex);
         if (matches) {
           matches.forEach((match) => {

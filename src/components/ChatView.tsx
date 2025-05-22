@@ -135,22 +135,11 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
     );
   };
 
-  // Main JSX guarded safely
+  // Main JSX
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow overflow-y-auto p-4 space-y-6 bg-gray-900">
-        {currentSessionDocuments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
-            <FileText className="h-16 w-16 mb-4 text-gray-400" />
-            <h2 className="text-2xl font-semibold mb-2">
-              Start a conversation
-            </h2>
-            <p className="max-w-md text-gray-400">
-              Ask questions about your documents or upload more files to
-              analyze.
-            </p>
-          </div>
-        ) : (
+        {hasChatHistory ? (
           <>
             {filteredMessages.map((message) => (
               <div
@@ -172,20 +161,43 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
                 </div>
               </div>
             ))}
-
-            {/* Loading Bot Message Animation */}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="max-w-3xl rounded-lg p-4 bg-gray-800 text-white">
-                  <div className="flex space-x-1 animate-pulse">
-                    <div className="w-2 h-2 bg-white rounded-full" />
-                    <div className="w-2 h-2 bg-white rounded-full" />
-                    <div className="w-2 h-2 bg-white rounded-full" />
-                  </div>
-                </div>
-              </div>
-            )}
           </>
+        ) : currentSessionDocuments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
+            <FileText className="h-16 w-16 mb-4 text-gray-400" />
+            <h2 className="text-2xl font-semibold mb-2">
+              Start a conversation
+            </h2>
+            <p className="max-w-md text-gray-400">
+              Ask questions about your documents or upload more files to
+              analyze.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
+            <FileText className="h-16 w-16 mb-4 text-gray-400" />
+            <h2 className="text-2xl font-semibold mb-2">
+              {hasUrlScraped ? "Website content ready" : "Document ready"}
+            </h2>
+            <p className="max-w-md text-gray-400">
+              {hasUrlScraped 
+                ? "Ask questions about the website content" 
+                : "Ask questions about your document"}
+            </p>
+          </div>
+        )}
+
+        {/* Loading Bot Message Animation */}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="max-w-3xl rounded-lg p-4 bg-gray-800 text-white">
+              <div className="flex space-x-1 animate-pulse">
+                <div className="w-2 h-2 bg-white rounded-full" />
+                <div className="w-2 h-2 bg-white rounded-full" />
+                <div className="w-2 h-2 bg-white rounded-full" />
+              </div>
+            </div>
+          </div>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -231,31 +243,36 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
           )}
 
           <div className="flex items-center gap-3 flex-1">
-            <Button
-              type="button"
-              onClick={onUploadClick}
-              variant="ghost"
-              className="text-gray-300 hover:text-white hover:bg-gray-700"
-              title="Upload Document"
-              disabled={hasUrlScraped || hasChatHistory}
-            >
-              <Upload className="h-5 w-5" />
-            </Button>
-            
-            <Button
-              type="button"
-              onClick={onUrlClick}
-              variant="ghost"
-              className="text-gray-300 hover:text-white hover:bg-gray-700"
-              title="Scrape Website URL"
-              disabled={hasPdfUploaded || hasChatHistory}
-            >
-              <Link className="h-5 w-5" />
-            </Button>
+            {/* Only show upload/URL buttons if no history and no documents/URLs */}
+            {!hasChatHistory && !hasUrlScraped && !hasPdfUploaded && (
+              <>
+                <Button
+                  type="button"
+                  onClick={onUploadClick}
+                  variant="ghost"
+                  className="text-gray-300 hover:text-white hover:bg-gray-700"
+                  title="Upload Document"
+                >
+                  <Upload className="h-5 w-5" />
+                </Button>
+                
+                <Button
+                  type="button"
+                  onClick={onUrlClick}
+                  variant="ghost"
+                  className="text-gray-300 hover:text-white hover:bg-gray-700"
+                  title="Scrape Website URL"
+                >
+                  <Link className="h-5 w-5" />
+                </Button>
+              </>
+            )}
 
             <Input
               type="text"
-              placeholder="Ask about your documents..."
+              placeholder={hasUrlScraped 
+                ? "Ask about the website content..." 
+                : "Ask about your documents..."}
               className="flex-1 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus-visible:ring-[#A259FF]"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

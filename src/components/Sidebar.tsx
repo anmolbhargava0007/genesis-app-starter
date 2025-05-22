@@ -42,6 +42,7 @@ const Sidebar = () => {
     deleteWorkspace,
     loadPromptHistory,
     currentSessionDocuments,
+    chatMessages,
   } = useWorkspace();
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
@@ -110,6 +111,12 @@ const Sidebar = () => {
     }
   };
 
+  // Helper function to check if a workspace has chat history
+  const hasWorkspaceChatHistory = (workspaceId: number | undefined): boolean => {
+    if (!workspaceId) return false;
+    return chatMessages[workspaceId]?.length > 0 || false;
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-800 border-r border-gray-700 w-72 overflow-hidden">
       <div className="flex justify-center">
@@ -151,103 +158,125 @@ const Sidebar = () => {
             </div>
 
             <div className="space-y-1 mt-2">
-              {filteredWorkspaces.map((workspace) => (
-                <div
-                  key={workspace.ws_id}
-                  onClick={() => handleWorkspaceClick(workspace)}
-                  className={`flex items-start justify-between p-2 rounded-md cursor-pointer group transition-colors duration-200 ${
-                    selectedWorkspace?.ws_id === workspace.ws_id
-                      ? "bg-gray-700 border-l-4 border-[#A259FF]"
-                      : "hover:bg-gray-700 border-l-4 border-transparent"
-                  }`}
-                >
-                  <div className="flex items-start space-x-2">
-                    <FileText
-                      className={`h-4 w-4 mt-0.5 ${
-                        selectedWorkspace?.ws_id === workspace.ws_id
-                          ? "text-[#A259FF]"
-                          : "text-gray-400"
-                      }`}
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-gray-200">
-                        {workspace.ws_name}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {workspace.documents?.length || 0} files
-                      </p>
+              {filteredWorkspaces.map((workspace) => {
+                const wsId = workspace.ws_id || 0;
+                const hasHistory = hasWorkspaceChatHistory(wsId);
+                const isSelected = selectedWorkspace?.ws_id === wsId;
+                
+                // Determine if workspace has URL or PDF content based on chat history or current session
+                const workspaceHasPdf = isSelected ? hasPdfUploaded : workspace.documents?.length > 0;
+                const workspaceHasUrl = isSelected ? hasUrlScraped : hasHistory && !workspaceHasPdf;
+                
+                return (
+                  <div
+                    key={wsId}
+                    onClick={() => handleWorkspaceClick(workspace)}
+                    className={`flex items-start justify-between p-2 rounded-md cursor-pointer group transition-colors duration-200 ${
+                      isSelected
+                        ? "bg-gray-700 border-l-4 border-[#A259FF]"
+                        : "hover:bg-gray-700 border-l-4 border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-start space-x-2">
+                      {workspaceHasUrl ? (
+                        <Link
+                          className={`h-4 w-4 mt-0.5 ${
+                            isSelected
+                              ? "text-[#A259FF]"
+                              : "text-gray-400"
+                          }`}
+                        />
+                      ) : (
+                        <FileText
+                          className={`h-4 w-4 mt-0.5 ${
+                            isSelected
+                              ? "text-[#A259FF]"
+                              : "text-gray-400"
+                          }`}
+                        />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-200">
+                          {workspace.ws_name}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {workspaceHasUrl 
+                            ? "Web Content" 
+                            : `${workspace.documents?.length || 0} files`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
+                        onClick={(e) => handleHistoryClick(workspace, e)}
+                        title="View History"
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+
+                      {/* URL Button - disabled if PDF is uploaded or history exists */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
+                        onClick={(e) => handleUrlClick(e)}
+                        title="Scrape Website"
+                        disabled={isSelected && (workspaceHasPdf || workspaceHasUrl || hasHistory)}
+                      >
+                        <Link className="h-4 w-4" />
+                      </Button>
+
+                      {/* Upload Button - disabled if URL is scraped or history exists */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
+                        onClick={(e) => handleUploadClick(e)}
+                        title="Upload Document"
+                        disabled={isSelected && (workspaceHasUrl || workspaceHasPdf || hasHistory)}
+                      >
+                        <Upload className="h-4 w-4" />
+                      </Button>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-40 bg-gray-800 text-gray-200 border-gray-700"
+                        >
+                          <DropdownMenuItem
+                            onClick={(e) => handleEditClick(workspace, e)}
+                            className="focus:bg-gray-700 focus:text-white"
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            <span>Edit</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-gray-700" />
+                          <DropdownMenuItem
+                            className="text-red-400 focus:text-red-300 focus:bg-gray-700"
+                            onClick={(e) => handleDeleteClick(workspace, e)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
-
-                  <div className="flex items-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
-                      onClick={(e) => handleHistoryClick(workspace, e)}
-                      title="View History"
-                    >
-                      <History className="h-4 w-4" />
-                    </Button>
-
-                    {/* URL Button - disabled if PDF is uploaded */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
-                      onClick={(e) => handleUrlClick(e)}
-                      title="Scrape Website"
-                      disabled={selectedWorkspace?.ws_id === workspace.ws_id && hasPdfUploaded}
-                    >
-                      <Link className="h-4 w-4" />
-                    </Button>
-
-                    {/* Upload Button - disabled if URL is scraped */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
-                      onClick={(e) => handleUploadClick(e)}
-                      title="Upload Document"
-                      disabled={selectedWorkspace?.ws_id === workspace.ws_id && hasUrlScraped}
-                    >
-                      <Upload className="h-4 w-4" />
-                    </Button>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="w-40 bg-gray-800 text-gray-200 border-gray-700"
-                      >
-                        <DropdownMenuItem
-                          onClick={(e) => handleEditClick(workspace, e)}
-                          className="focus:bg-gray-700 focus:text-white"
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          <span>Edit</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-gray-700" />
-                        <DropdownMenuItem
-                          className="text-red-400 focus:text-red-300 focus:bg-gray-700"
-                          onClick={(e) => handleDeleteClick(workspace, e)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Delete</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
