@@ -1,3 +1,4 @@
+
 import { LLMResponse } from "@/types/api";
 import { v4 as uuidv4 } from "uuid";
 import { 
@@ -80,17 +81,31 @@ export const llmApi = {
       return {
         answer: data.answer,
         sources: data.sources?.map((source: string, index: number) => {
-          // Parse source information from the string format
-          const match = source.match(/Context \d+: (.+) page (\d+)/);
-          const fileName = match ? match[1] : `unknown_${index}.pdf`;
-          const pageNum = match ? parseInt(match[2]) : 1;
-          
-          return {
-            source_id: uuidv4(),
-            summary: source,
-            file: fileName,
-            page: pageNum,
-          };
+          // Handle different types of sources (PDF vs URL)
+          if (source.includes('page')) {
+            // Parse source information from the string format for PDF
+            const match = source.match(/Context \d+: (.+) page (\d+)/);
+            const fileName = match ? match[1] : `unknown_${index}.pdf`;
+            const pageNum = match ? parseInt(match[2]) : 1;
+            
+            return {
+              source_id: uuidv4(),
+              summary: source,
+              file: fileName,
+              page: pageNum,
+            };
+          } else {
+            // Handle URL source format
+            const urlMatch = source.match(/Context \d+: (.+)/);
+            const url = urlMatch ? urlMatch[1] : source;
+            
+            return {
+              source_id: uuidv4(),
+              summary: source,
+              file: url,
+              page: undefined,
+            };
+          }
         }) || [],
       };
     } catch (error) {

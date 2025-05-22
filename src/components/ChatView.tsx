@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Send, Upload, FileText, ChevronDown, ChevronUp, Link } from "lucide-react";
 import { toast } from "sonner";
 import { ChatMessage, LLMSource } from "@/types/api";
-import { v4 as uuidv4 } from "uuid";
 
 interface ChatViewProps {
   workspaceId: number;
@@ -16,8 +15,12 @@ interface ChatViewProps {
 
 const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => {
   const [showAll, setShowAll] = useState(false);
-  const { sendMessage, chatMessages, loading, currentSessionDocuments } =
-    useWorkspace();
+  const { 
+    sendMessage, 
+    chatMessages, 
+    loading, 
+    currentSessionDocuments
+  } = useWorkspace();
   const [query, setQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [expandedSources, setExpandedSources] = useState<
@@ -27,6 +30,9 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
   // Determine if URL or PDF has been used in this session
   const hasPdfUploaded = currentSessionDocuments.some(doc => doc.endsWith('.pdf'));
   const hasUrlScraped = currentSessionDocuments.some(doc => !doc.endsWith('.pdf') && doc.startsWith('http'));
+  
+  // Check if there's chat history
+  const hasChatHistory = chatMessages[workspaceId]?.length > 0;
 
   const filteredMessages = chatMessages[workspaceId] || [];
 
@@ -108,9 +114,14 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
             {sources.map((source) => (
               <div key={source.source_id} className="mb-2 last:mb-0">
                 <div className="flex items-center text-blue-400">
-                  <FileText className="h-4 w-4 mr-1" />
+                  {source.file.startsWith('http') ? (
+                    <Link className="h-4 w-4 mr-1" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-1" />
+                  )}
                   <span className="text-sm font-medium">
-                    {source.file} (page {source.page})
+                    {source.file}
+                    {source.page && ` (page ${source.page})`}
                   </span>
                 </div>
                 <p className="text-sm text-gray-300 mt-1 pl-5">
@@ -226,7 +237,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
               variant="ghost"
               className="text-gray-300 hover:text-white hover:bg-gray-700"
               title="Upload Document"
-              disabled={hasUrlScraped}
+              disabled={hasUrlScraped || hasChatHistory}
             >
               <Upload className="h-5 w-5" />
             </Button>
@@ -237,7 +248,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
               variant="ghost"
               className="text-gray-300 hover:text-white hover:bg-gray-700"
               title="Scrape Website URL"
-              disabled={hasPdfUploaded}
+              disabled={hasPdfUploaded || hasChatHistory}
             >
               <Link className="h-5 w-5" />
             </Button>

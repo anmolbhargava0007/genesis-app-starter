@@ -325,7 +325,20 @@ useEffect(() => {
     prompts.forEach((prompt) => {
       const responseText = prompt.response_text || "";
 
-      // This is a simplified approach - in a real app, you'd have proper metadata
+      // Look for URLs mentioned in the response
+      if (responseText.includes('http://') || responseText.includes('https://')) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const matches = responseText.match(urlRegex);
+        if (matches) {
+          matches.forEach((match) => {
+            if (!documents.includes(match) && !match.endsWith('.pdf')) {
+              documents.push(match);
+            }
+          });
+        }
+      }
+      
+      // Look for PDF filenames
       if (responseText.includes("invoice_") || responseText.includes(".pdf")) {
         const regex = /([a-zA-Z0-9_-]+\.pdf)/g;
         const matches = responseText.match(regex);

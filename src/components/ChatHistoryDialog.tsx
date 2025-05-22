@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
-import { History, MessageSquare } from "lucide-react";
+import { History, MessageSquare, Link } from "lucide-react";
 import { ChatPrompt } from "@/types/api";
 import { promptHistoryApi } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
@@ -89,10 +90,23 @@ const ChatHistoryDialog = ({
     const documents: string[] = [];
     prompts.forEach((prompt) => {
       const responseText = prompt.response_text || "";
+      
+      // Extract PDF filenames
       if (responseText.includes("invoice_") || responseText.includes(".pdf")) {
         const matches = responseText.match(/([a-zA-Z0-9_-]+\.pdf)/g);
         matches?.forEach((match) => {
           if (!documents.includes(match)) {
+            documents.push(match);
+          }
+        });
+      }
+      
+      // Extract URLs
+      if (responseText.includes("http://") || responseText.includes("https://")) {
+        const urlMatches = responseText.match(/(https?:\/\/[^\s"']+)/g);
+        urlMatches?.forEach((match) => {
+          // Only add if it's a URL and not a PDF file
+          if (!documents.includes(match) && !match.endsWith('.pdf')) {
             documents.push(match);
           }
         });
@@ -108,6 +122,10 @@ const ChatHistoryDialog = ({
 
   const toggleSession = (sessionId: string) => {
     setExpandedSession(expandedSession === sessionId ? null : sessionId);
+  };
+
+  const isUrlDocument = (doc: string): boolean => {
+    return doc.startsWith('http://') || doc.startsWith('https://');
   };
 
   return (
@@ -152,7 +170,14 @@ const ChatHistoryDialog = ({
                           <div className="font-medium text-white mb-1">Documents:</div>
                           <ul className="list-disc list-inside text-zinc-300">
                             {group.documents.map((doc, idx) => (
-                              <li key={idx}>{doc}</li>
+                              <li key={idx} className="flex items-center">
+                                {isUrlDocument(doc) ? (
+                                  <Link className="h-3 w-3 mr-1 inline" />
+                                ) : (
+                                  <span className="inline-block w-3 h-3 mr-1"></span>
+                                )}
+                                <span className="truncate">{doc}</span>
+                              </li>
                             ))}
                           </ul>
                         </div>
