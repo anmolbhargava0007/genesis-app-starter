@@ -86,3 +86,13 @@ export interface SignupRequest {
   gender: "MALE" | "FEMALE" | "OTHER";
   is_active: boolean;
 }
+
+// Add new type for session types
+export type SessionType = 'pdf' | 'url' | 'empty';
+
+// Add interface for session info
+export interface SessionInfo {
+  id: string;
+  type: SessionType;
+  documents: string[];
+}

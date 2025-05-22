@@ -1,17 +1,36 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import ChatView from "./ChatView";
 import UploadModal from "./UploadModal";
 import UrlModal from "./UrlModal";
-import UserMenu from "./UserMenu";
 
 const WorkspaceView = () => {
-  const { selectedWorkspace } = useWorkspace();
+  const { selectedWorkspace, currentSessionType } = useWorkspace();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
+
+  // Close modals when changing workspaces
+  useEffect(() => {
+    setIsUploadModalOpen(false);
+    setIsUrlModalOpen(false);
+  }, [selectedWorkspace?.ws_id]);
+
+  // Handle modal open based on session type
+  const handleUploadClick = () => {
+    // Only allow opening if no URL has been scraped
+    if (currentSessionType !== 'url') {
+      setIsUploadModalOpen(true);
+    }
+  };
+
+  const handleUrlClick = () => {
+    // Only allow opening if no PDF has been uploaded
+    if (currentSessionType !== 'pdf') {
+      setIsUrlModalOpen(true);
+    }
+  };
 
   if (!selectedWorkspace) {
     return (
@@ -36,8 +55,8 @@ const WorkspaceView = () => {
         {selectedWorkspace.ws_id && (
           <ChatView
             workspaceId={selectedWorkspace.ws_id}
-            onUploadClick={() => setIsUploadModalOpen(true)}
-            onUrlClick={() => setIsUrlModalOpen(true)}
+            onUploadClick={handleUploadClick}
+            onUrlClick={handleUrlClick}
           />
         )}
       </div>

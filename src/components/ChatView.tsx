@@ -19,7 +19,8 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
     sendMessage, 
     chatMessages, 
     loading, 
-    currentSessionDocuments
+    currentSessionDocuments,
+    currentSessionType
   } = useWorkspace();
   const [query, setQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -27,12 +28,13 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
     Record<string, boolean>
   >({});
 
-  // Determine if URL or PDF has been used in this session
-  const hasPdfUploaded = currentSessionDocuments.some(doc => doc.endsWith('.pdf'));
-  const hasUrlScraped = currentSessionDocuments.some(doc => !doc.endsWith('.pdf') && doc.startsWith('http'));
-  
-  // Check if there's chat history
+  // Determine if chat history exists
   const hasChatHistory = chatMessages[workspaceId]?.length > 0;
+  
+  // Check session state
+  const isPdfSession = currentSessionType === 'pdf';
+  const isUrlSession = currentSessionType === 'url';
+  const isEmptySession = currentSessionType === 'empty';
 
   const filteredMessages = chatMessages[workspaceId] || [];
 
@@ -51,7 +53,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
   const handleSendMessage = async () => {
     if (!query.trim()) return;
 
-    if (!currentSessionDocuments || currentSessionDocuments.length === 0) {
+    if (isEmptySession) {
       toast.warning("Upload a document or scrape a URL first");
       return;
     }
@@ -162,7 +164,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
               </div>
             ))}
           </>
-        ) : currentSessionDocuments.length === 0 ? (
+        ) : isEmptySession ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
             <FileText className="h-16 w-16 mb-4 text-gray-400" />
             <h2 className="text-2xl font-semibold mb-2">
@@ -177,10 +179,10 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
             <FileText className="h-16 w-16 mb-4 text-gray-400" />
             <h2 className="text-2xl font-semibold mb-2">
-              {hasUrlScraped ? "Website content ready" : "Document ready"}
+              {isUrlSession ? "Website content ready" : "Document ready"}
             </h2>
             <p className="max-w-md text-gray-400">
-              {hasUrlScraped 
+              {isUrlSession 
                 ? "Ask questions about the website content" 
                 : "Ask questions about your document"}
             </p>
@@ -206,7 +208,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
       <div className="border-t border-gray-700 bg-gray-800 flex justify-start items-center">
         <div className="flex flex-wrap md:flex-nowrap gap-6 items-center justify-center w-full max-w-6xl">
           {/* Only show document section for PDFs, not for scraped URLs */}
-          {hasPdfUploaded && (
+          {isPdfSession && (
             <div className="border-b border-gray-700 p-3 flex-shrink-0 bg-gray-800">
               <div className="flex items-center mb-1">
                 <FileText className="h-2 w-2 mr-2 text-[#A259FF]" />
@@ -244,7 +246,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
 
           <div className="flex items-center gap-3 flex-1">
             {/* Only show upload/URL buttons if no history and no documents/URLs */}
-            {!hasChatHistory && !hasUrlScraped && !hasPdfUploaded && (
+            {isEmptySession && !hasChatHistory && (
               <>
                 <Button
                   type="button"
@@ -252,6 +254,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
                   variant="ghost"
                   className="text-gray-300 hover:text-white hover:bg-gray-700"
                   title="Upload Document"
+                  disabled={isUrlSession}
                 >
                   <Upload className="h-5 w-5" />
                 </Button>
@@ -262,6 +265,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
                   variant="ghost"
                   className="text-gray-300 hover:text-white hover:bg-gray-700"
                   title="Scrape Website URL"
+                  disabled={isPdfSession}
                 >
                   <Link className="h-5 w-5" />
                 </Button>
@@ -270,7 +274,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
 
             <Input
               type="text"
-              placeholder={hasUrlScraped 
+              placeholder={isUrlSession 
                 ? "Ask about the website content..." 
                 : "Ask about your documents..."}
               className="flex-1 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus-visible:ring-[#A259FF]"
@@ -283,7 +287,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
             <Button
               className="bg-[#A259FF] hover:bg-[#A259FF]/90 text-white"
               onClick={handleSendMessage}
-              disabled={!query.trim() || loading}
+              disabled={!query.trim() || loading || isEmptySession}
             >
               <Send className="h-4 w-4 mr-2" />
               Send

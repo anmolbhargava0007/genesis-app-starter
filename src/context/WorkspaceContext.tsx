@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -14,6 +15,8 @@ import {
   ChatData,
   LLMResponse,
   ChatPrompt,
+  SessionType,
+  SessionInfo
 } from "@/types/api";
 import { workspaceApi, documentApi, promptHistoryApi } from "@/services/api";
 import { llmApi } from "@/services/llmApi";
@@ -38,10 +41,15 @@ interface WorkspaceContextType {
   currentSessionDocuments: string[];
   listUploadedFiles: (sessionId: string) => Promise<string[]>;
   scrapeUrl: (url: string) => Promise<boolean>;
+  currentSessionType: SessionType;
 }
 
 interface SessionIdMap {
   [workspaceId: number]: string;
+}
+
+interface SessionTypeMap {
+  [workspaceId: number]: SessionType;
 }
 
 interface SessionDocumentsMap {
@@ -57,8 +65,10 @@ const DEFAULT_MODEL_NAME = "llama3.2:latest";
 const DEFAULT_TEMPERATURE = 1.0;
 const DEFAULT_TOKEN_USAGE = 100;
 
-// Local storage key for session IDs
+// Local storage keys
 const SESSION_IDS_STORAGE_KEY = "workspace_session_ids";
+const SESSION_TYPES_STORAGE_KEY = "workspace_session_types";
+const SESSION_DOCUMENTS_STORAGE_KEY = "workspace_session_documents";
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
@@ -68,22 +78,38 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatData>({});
+  
+  // Initialize session data from localStorage
   const [sessionIds, setSessionIds] = useState<SessionIdMap>(() => {
-    // Initialize from localStorage if available
     const savedSessionIds = localStorage.getItem(SESSION_IDS_STORAGE_KEY);
     return savedSessionIds ? JSON.parse(savedSessionIds) : {};
   });
-  const [sessionDocuments, setSessionDocuments] = useState<SessionDocumentsMap>(
-    {}
-  );
-  const [currentSessionDocuments, setCurrentSessionDocuments] = useState<
-    string[]
-  >([]);
+  
+  const [sessionTypes, setSessionTypes] = useState<SessionTypeMap>(() => {
+    const savedSessionTypes = localStorage.getItem(SESSION_TYPES_STORAGE_KEY);
+    return savedSessionTypes ? JSON.parse(savedSessionTypes) : {};
+  });
+  
+  const [sessionDocuments, setSessionDocuments] = useState<SessionDocumentsMap>(() => {
+    const savedSessionDocs = localStorage.getItem(SESSION_DOCUMENTS_STORAGE_KEY);
+    return savedSessionDocs ? JSON.parse(savedSessionDocs) : {};
+  });
+  
+  const [currentSessionDocuments, setCurrentSessionDocuments] = useState<string[]>([]);
+  const [currentSessionType, setCurrentSessionType] = useState<SessionType>('empty');
 
-  // Save session IDs to localStorage whenever they change
+  // Save session data to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(SESSION_IDS_STORAGE_KEY, JSON.stringify(sessionIds));
   }, [sessionIds]);
+  
+  useEffect(() => {
+    localStorage.setItem(SESSION_TYPES_STORAGE_KEY, JSON.stringify(sessionTypes));
+  }, [sessionTypes]);
+  
+  useEffect(() => {
+    localStorage.setItem(SESSION_DOCUMENTS_STORAGE_KEY, JSON.stringify(sessionDocuments));
+  }, [sessionDocuments]);
 
   useEffect(() => {
     if (user?.user_id) {
@@ -91,12 +117,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user?.user_id]);
 
-  // Load chat history when a workspace is selected
+  // Load chat history and session info when a workspace is selected
   useEffect(() => {
     if (selectedWorkspace?.ws_id && user?.user_id) {
       loadLatestChatHistory(selectedWorkspace.ws_id, user.user_id);
 
-      // If workspace has a session_id and is not yet in sessionIds, add it
+      // If workspace has a session_id, update sessionIds
       if (selectedWorkspace.session_id && selectedWorkspace.ws_id) {
         if (!sessionIds[selectedWorkspace.ws_id]) {
           setSessionIds((prev) => ({
@@ -105,15 +131,37 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           }));
         }
 
+        // Update current session type based on stored data
+        if (selectedWorkspace.ws_id && sessionTypes[selectedWorkspace.ws_id]) {
+          setCurrentSessionType(sessionTypes[selectedWorkspace.ws_id]);
+        } else {
+          // Default to 'empty' if no type is stored
+          setCurrentSessionType('empty');
+        }
+
         // Load session documents for the workspace
         if (selectedWorkspace.session_id) {
           listUploadedFiles(selectedWorkspace.session_id)
             .then((files) => {
               if (files && files.length > 0) {
+                // Determine session type based on file extensions
+                const type = files.some(file => file.endsWith('.pdf')) ? 'pdf' : 
+                             files.some(file => file.startsWith('http')) ? 'url' : 'empty';
+                
+                // Store the session type
+                setSessionTypes((prev) => ({
+                  ...prev,
+                  [selectedWorkspace.ws_id!]: type
+                }));
+                
+                setCurrentSessionType(type);
+                
+                // Store the documents
                 setSessionDocuments((prev) => ({
                   ...prev,
                   [selectedWorkspace.ws_id!]: files,
                 }));
+                
                 setCurrentSessionDocuments(files);
               }
             })
@@ -133,24 +181,40 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           const files = await listUploadedFiles(selectedWorkspace.session_id);
           const docs = files && files.length > 0 ? files : [];
           
+          // Determine session type based on files
+          let type: SessionType = 'empty';
+          if (docs.length > 0) {
+            type = docs.some(doc => doc.endsWith('.pdf')) ? 'pdf' : 
+                   docs.some(doc => doc.startsWith('http')) ? 'url' : 'empty';
+          }
+          
+          // Update session type
+          setSessionTypes((prev) => ({
+            ...prev,
+            [selectedWorkspace.ws_id!]: type
+          }));
+          
+          setCurrentSessionType(type);
+          
+          // Update session documents
           setSessionDocuments((prev) => ({
             ...prev,
             [selectedWorkspace.ws_id!]: docs,
           }));
 
-          setCurrentSessionDocuments(docs); // Always update, even if empty
+          setCurrentSessionDocuments(docs);
         } catch (err) {
           console.error("Error loading session files:", err);
-          setCurrentSessionDocuments([]); // Reset to empty on error
+          setCurrentSessionDocuments([]);
         }
       } else {
-        setCurrentSessionDocuments([]); // Reset if no selected workspace
+        setCurrentSessionDocuments([]);
+        setCurrentSessionType('empty');
       }
     };
 
     loadDocumentsForWorkspace();
   }, [selectedWorkspace?.ws_id, selectedWorkspace?.session_id]);
-
 
   const loadLatestChatHistory = async (wsId: number, userId: number) => {
     try {
@@ -228,16 +292,36 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
             [wsId]: formattedMessages,
           }));
 
-          // Extract document names (mock implementation)
+          // Extract document names and determine session type
           const documents = extractDocumentNamesFromPrompts(chatPrompts);
+          
+          // Determine session type based on documents
+          let sessionType: SessionType = 'empty';
+          if (documents.length > 0) {
+            sessionType = documents.some(doc => doc.endsWith('.pdf')) ? 'pdf' : 
+                          documents.some(doc => doc.startsWith('http')) ? 'url' : 'empty';
+          }
+          
+          // Update session type
+          setSessionTypes((prev) => ({
+            ...prev,
+            [wsId]: sessionType
+          }));
+          
+          if (wsId === selectedWorkspace?.ws_id) {
+            setCurrentSessionType(sessionType);
+          }
+          
+          // Update session documents
           setSessionDocuments((prev) => ({
             ...prev,
             [wsId]: documents,
           }));
+          
           setCurrentSessionDocuments(documents);
 
           console.log(
-            `Loaded ${formattedMessages.length} messages for workspace ${wsId}`
+            `Loaded ${formattedMessages.length} messages for workspace ${wsId} with session type ${sessionType}`
           );
         }
       } else {
@@ -246,6 +330,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           ...prev,
           [wsId]: [],
         }));
+        
+        // Reset session type if no history
+        if (wsId === selectedWorkspace?.ws_id) {
+          setCurrentSessionType('empty');
+        }
       }
     } catch (err) {
       console.error("Error loading chat history:", err);
@@ -303,12 +392,30 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               [selectedWorkspace.ws_id!]: prompt.session_id,
             }));
 
-            // Extract document names (mock implementation)
+            // Extract document names and determine session type
             const documents = extractDocumentNamesFromPrompts(sortedPrompts);
+            
+            // Determine session type based on documents
+            let sessionType: SessionType = 'empty';
+            if (documents.length > 0) {
+              sessionType = documents.some(doc => doc.endsWith('.pdf')) ? 'pdf' : 
+                            documents.some(doc => doc.startsWith('http')) ? 'url' : 'empty';
+            }
+            
+            // Update session type
+            setSessionTypes((prev) => ({
+              ...prev,
+              [selectedWorkspace.ws_id!]: sessionType
+            }));
+            
+            setCurrentSessionType(sessionType);
+            
+            // Update session documents
             setSessionDocuments((prev) => ({
               ...prev,
               [selectedWorkspace.ws_id!]: documents,
             }));
+            
             setCurrentSessionDocuments(documents);
 
             toast.success("Loaded chat history");
@@ -490,9 +597,22 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         : response.data;
 
       if (response.success && workspaceData?.ws_id) {
+        // Store session information
         setSessionIds((prev) => ({
           ...prev,
           [workspaceData.ws_id]: sessionId,
+        }));
+        
+        // Initialize session type as empty
+        setSessionTypes((prev) => ({
+          ...prev,
+          [workspaceData.ws_id]: 'empty'
+        }));
+        
+        // Initialize empty documents array
+        setSessionDocuments((prev) => ({
+          ...prev,
+          [workspaceData.ws_id]: []
         }));
 
         console.log(
@@ -609,6 +729,16 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
+      // Check current session type
+      const wsId = selectedWorkspace.ws_id!;
+      const currentType = sessionTypes[wsId] || 'empty';
+      
+      // If session already contains a URL, don't allow PDF upload
+      if (currentType === 'url') {
+        toast.error("This workspace already contains a scraped URL. Create a new workspace for PDF documents.");
+        return false;
+      }
+
       // Upload document to LLM API using the session ID
       try {
         const result = await llmApi.uploadDocument(file, sessionId);
@@ -618,28 +748,34 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
             result.message || "Document uploaded successfully to AI"
           );
 
-          // Update session documents
-          if (selectedWorkspace.ws_id) {
-            setSessionDocuments((prev) => {
-              const currentDocs = prev[selectedWorkspace.ws_id!] || [];
-              const newDocs = [...currentDocs];
-              if (!currentDocs.includes(file.name)) {
-                newDocs.push(file.name);
-              }
-              return {
-                ...prev,
-                [selectedWorkspace.ws_id!]: newDocs,
-              };
-            });
+          // Update session type to PDF
+          setSessionTypes((prev) => ({
+            ...prev,
+            [wsId]: 'pdf'
+          }));
+          
+          setCurrentSessionType('pdf');
 
-            // Update current session documents
-            setCurrentSessionDocuments((prevDocs) => {
-              if (!prevDocs.includes(file.name)) {
-                return [...prevDocs, file.name];
-              }
-              return prevDocs;
-            });
-          }
+          // Update session documents
+          setSessionDocuments((prev) => {
+            const currentDocs = prev[wsId] || [];
+            const newDocs = [...currentDocs];
+            if (!currentDocs.includes(file.name)) {
+              newDocs.push(file.name);
+            }
+            return {
+              ...prev,
+              [wsId]: newDocs,
+            };
+          });
+
+          // Update current session documents
+          setCurrentSessionDocuments((prevDocs) => {
+            if (!prevDocs.includes(file.name)) {
+              return [...prevDocs, file.name];
+            }
+            return prevDocs;
+          });
         } else {
           console.error("Failed to upload to LLM API");
           toast.error("Failed to process document with AI");
@@ -727,8 +863,15 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const workspace = workspaces.find((w) => w.ws_id === workspaceId);
       const sessionId = workspace?.session_id || sessionIds[workspaceId];
 
+      // Check if there's a valid session and that there are documents or a URL
       if (!sessionId) {
-        throw new Error("No session found. Please upload a document first.");
+        throw new Error("No session found. Please create a new workspace.");
+      }
+      
+      // Check session type - must be either 'pdf' or 'url' to proceed
+      const sessionType = sessionTypes[workspaceId] || 'empty';
+      if (sessionType === 'empty') {
+        throw new Error("Upload a document or scrape a URL first");
       }
 
       // Send message to LLM API with session ID
@@ -817,6 +960,22 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
+      // Check current session type
+      const wsId = selectedWorkspace.ws_id!;
+      const currentType = sessionTypes[wsId] || 'empty';
+      
+      // If session already contains PDFs, don't allow URL scraping
+      if (currentType === 'pdf') {
+        toast.error("This workspace already contains PDF documents. Create a new workspace for URL scraping.");
+        return false;
+      }
+      
+      // If session already contains a URL, don't allow another URL
+      if (currentType === 'url' && sessionDocuments[wsId]?.length > 0) {
+        toast.error("This workspace already contains a scraped URL. Create a new workspace for another URL.");
+        return false;
+      }
+
       // Scrape URL using the LLM API
       try {
         const result = await llmApi.scrapeUrl(url, sessionId);
@@ -824,28 +983,34 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         if (result.success) {
           toast.success(result.message || "URL scraped successfully");
 
-          // Update session documents to include the URL
-          if (selectedWorkspace.ws_id) {
-            setSessionDocuments((prev) => {
-              const currentDocs = prev[selectedWorkspace.ws_id!] || [];
-              const newDocs = [...currentDocs];
-              if (!currentDocs.includes(url)) {
-                newDocs.push(url);
-              }
-              return {
-                ...prev,
-                [selectedWorkspace.ws_id!]: newDocs,
-              };
-            });
+          // Update session type to URL
+          setSessionTypes((prev) => ({
+            ...prev,
+            [wsId]: 'url'
+          }));
+          
+          setCurrentSessionType('url');
 
-            // Update current session documents
-            setCurrentSessionDocuments((prevDocs) => {
-              if (!prevDocs.includes(url)) {
-                return [...prevDocs, url];
-              }
-              return prevDocs;
-            });
-          }
+          // Update session documents to include the URL
+          setSessionDocuments((prev) => {
+            const currentDocs = prev[wsId] || [];
+            const newDocs = [...currentDocs];
+            if (!currentDocs.includes(url)) {
+              newDocs.push(url);
+            }
+            return {
+              ...prev,
+              [wsId]: newDocs,
+            };
+          });
+
+          // Update current session documents
+          setCurrentSessionDocuments((prevDocs) => {
+            if (!prevDocs.includes(url)) {
+              return [...prevDocs, url];
+            }
+            return prevDocs;
+          });
           
           return true;
         } else {
@@ -887,6 +1052,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     chatMessages,
     currentSessionDocuments,
     listUploadedFiles,
+    currentSessionType,
   };
 
   return (
