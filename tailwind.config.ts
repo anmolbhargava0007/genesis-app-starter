@@ -32,7 +32,7 @@ export default {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
-				datagpt: {
+				salesadvisor: {
 					blue: '#0A66C2',  // Updated primary color
 					'light-blue': '#3b82f6',
 					'dark-blue': '#0a4d99',

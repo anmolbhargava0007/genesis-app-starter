@@ -89,7 +89,7 @@ const SignupPage = () => {
           Create an account
         </h1>
         <p className="text-sm text-gray-400 text-center">
-          Enter your details to get started with DataGpt
+          Enter your details to get started with SalesAdvisor
         </p>
         
         <Form {...form}>

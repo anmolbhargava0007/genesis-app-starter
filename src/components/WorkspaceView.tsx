@@ -16,7 +16,7 @@ const WorkspaceView = () => {
         <div className="p-8 bg-gray-800 rounded-lg shadow-sm border border-gray-700 max-w-md text-center">
           <FileText className="h-12 w-12 text-[#A259FF] mx-auto mb-4" />
           <h2 className="text-2xl font-semibold text-white mb-2">
-            Welcome to DataGpt
+            Welcome to SalesAdvisor
           </h2>
           <p className="text-gray-300 mb-6">
             Select a workspace or create a new one to get started with your

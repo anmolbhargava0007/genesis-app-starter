@@ -25,11 +25,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <header className="sticky top-0 z-20 border-b border-gray-700 p-4 bg-gray-800 shadow-sm flex items-center justify-between">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <h1 className="text-2xl font-semibold text-white">
-                {/* <span className="text-[#A259FF]">DataGpt</span> */}
+                {/* <span className="text-[#A259FF]">SalesAdvisor</span> */}
               </h1>
             </div>
             <div className="flex items-center gap-4">
-              <Button 
+              {/* <Button 
                 variant="ghost" 
                 size="sm" 
                 className="h-8 w-8 px-0"
@@ -41,7 +41,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                   <Moon className="h-4 w-4" />
                 )}
                 <span className="sr-only">Toggle theme</span>
-              </Button>
+              </Button> */}
               {isAuthenticated && <UserMenu />}
             </div>
           </header>
