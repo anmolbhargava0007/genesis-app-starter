@@ -21,9 +21,11 @@ import {
   Trash2,
   Upload,
   History,
+  Link,
 } from "lucide-react";
 import WorkspaceDialog from "./WorkspaceDialog";
 import UploadModal from "./UploadModal";
+import UrlModal from "./UrlModal";
 import ChatHistoryDialog from "./ChatHistoryDialog";
 import logoWhite from "./../../public/icons/logo-white.png";
 import SidebarNav from "./SidebarNav";
@@ -39,12 +41,14 @@ const Sidebar = () => {
     selectWorkspace,
     deleteWorkspace,
     loadPromptHistory,
+    currentSessionDocuments,
   } = useWorkspace();
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [editWorkspace, setEditWorkspace] =
     useState<WorkspaceWithDocuments | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   const [historyWorkspaceId, setHistoryWorkspaceId] = useState<number | null>(
     null
@@ -52,6 +56,10 @@ const Sidebar = () => {
   
   // Show workspace content only on the workspace route
   const showWorkspaceContent = location.pathname === "/workspace";
+
+  // Determine if URL or PDF has been used in the current session
+  const hasPdfUploaded = currentSessionDocuments.some(doc => doc.endsWith('.pdf'));
+  const hasUrlScraped = currentSessionDocuments.some(doc => !doc.endsWith('.pdf') && doc.startsWith('http'));
 
   const filteredWorkspaces = searchQuery
     ? workspaces.filter((ws) =>
@@ -84,6 +92,11 @@ const Sidebar = () => {
   const handleUploadClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsUploadModalOpen(true);
+  };
+
+  const handleUrlClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsUrlModalOpen(true);
   };
 
   const handleHistoryClick = (
@@ -177,12 +190,26 @@ const Sidebar = () => {
                       <History className="h-4 w-4" />
                     </Button>
 
+                    {/* URL Button - disabled if PDF is uploaded */}
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
-                      onClick={handleUploadClick}
+                      onClick={(e) => handleUrlClick(e)}
+                      title="Scrape Website"
+                      disabled={selectedWorkspace?.ws_id === workspace.ws_id && hasPdfUploaded}
+                    >
+                      <Link className="h-4 w-4" />
+                    </Button>
+
+                    {/* Upload Button - disabled if URL is scraped */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
+                      onClick={(e) => handleUploadClick(e)}
                       title="Upload Document"
+                      disabled={selectedWorkspace?.ws_id === workspace.ws_id && hasUrlScraped}
                     >
                       <Upload className="h-4 w-4" />
                     </Button>
@@ -259,6 +286,11 @@ const Sidebar = () => {
       <UploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
+      />
+      
+      <UrlModal
+        isOpen={isUrlModalOpen}
+        onClose={() => setIsUrlModalOpen(false)}
       />
 
       {historyWorkspaceId && (

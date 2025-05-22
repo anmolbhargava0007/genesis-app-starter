@@ -21,7 +21,7 @@ interface UrlModalProps {
 }
 
 const UrlModal = ({ isOpen, onClose }: UrlModalProps) => {
-  const { selectedWorkspace } = useWorkspace();
+  const { selectedWorkspace, scrapeUrl } = useWorkspace();
   const [url, setUrl] = useState<string>("");
   const [processing, setProcessing] = useState<boolean>(false);
 
@@ -34,13 +34,12 @@ const UrlModal = ({ isOpen, onClose }: UrlModalProps) => {
     try {
       setProcessing(true);
 
-      const result = await llmApi.scrapeUrl(url, selectedWorkspace.session_id);
+      // Use the scrapeUrl method from context instead of direct API call
+      const success = await scrapeUrl(url);
 
-      if (result.success) {
-        toast.success(result.message || "URL scraped successfully");
+      if (success) {
+        toast.success("URL scraped successfully");
         onClose();
-        // Force refresh the workspace to update the UI with scraped content info
-        window.location.reload();
       } else {
         toast.error("Failed to scrape URL");
       }
