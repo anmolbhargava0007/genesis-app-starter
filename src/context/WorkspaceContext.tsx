@@ -37,6 +37,7 @@ interface WorkspaceContextType {
   chatMessages: ChatData;
   currentSessionDocuments: string[];
   listUploadedFiles: (sessionId: string) => Promise<string[]>;
+  scrapeUrl: (url: string) => Promise<boolean>;
 }
 
 interface SessionIdMap {
@@ -782,6 +783,77 @@ useEffect(() => {
     }
   };
 
+  const scrapeUrl = async (url: string): Promise<boolean> => {
+    try {
+      if (!selectedWorkspace) {
+        toast.error("Please select a workspace first");
+        return false;
+      }
+
+      setLoading(true);
+
+      // Get the session ID for this workspace
+      let sessionId = selectedWorkspace.ws_id
+        ? selectedWorkspace.session_id || sessionIds[selectedWorkspace.ws_id]
+        : undefined;
+
+      if (!sessionId) {
+        toast.error("No session found for this workspace");
+        return false;
+      }
+
+      // Scrape URL using the LLM API
+      try {
+        const result = await llmApi.scrapeUrl(url, sessionId);
+
+        if (result.success) {
+          toast.success(result.message || "URL scraped successfully");
+
+          // Update session documents to include the URL
+          if (selectedWorkspace.ws_id) {
+            setSessionDocuments((prev) => {
+              const currentDocs = prev[selectedWorkspace.ws_id!] || [];
+              const newDocs = [...currentDocs];
+              if (!currentDocs.includes(url)) {
+                newDocs.push(url);
+              }
+              return {
+                ...prev,
+                [selectedWorkspace.ws_id!]: newDocs,
+              };
+            });
+
+            // Update current session documents
+            setCurrentSessionDocuments((prevDocs) => {
+              if (!prevDocs.includes(url)) {
+                return [...prevDocs, url];
+              }
+              return prevDocs;
+            });
+          }
+          
+          return true;
+        } else {
+          console.error("Failed to scrape URL with LLM API");
+          toast.error("Failed to process URL");
+          return false;
+        }
+      } catch (error) {
+        console.error("Failed to scrape URL with LLM API:", error);
+        toast.error("Failed to process URL");
+        return false;
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to scrape URL";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const contextValue: WorkspaceContextType = {
     workspaces,
     selectedWorkspace,
@@ -792,6 +864,7 @@ useEffect(() => {
     deleteWorkspace,
     selectWorkspace,
     uploadDocument,
+    scrapeUrl,
     deleteDocument,
     refreshWorkspaces,
     sendMessage,

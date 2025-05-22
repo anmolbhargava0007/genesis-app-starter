@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Upload, FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, Upload, FileText, ChevronDown, ChevronUp, Link } from "lucide-react";
 import { toast } from "sonner";
 import { ChatMessage, LLMSource } from "@/types/api";
 import { v4 as uuidv4 } from "uuid";
@@ -10,9 +10,10 @@ import { v4 as uuidv4 } from "uuid";
 interface ChatViewProps {
   workspaceId: number;
   onUploadClick: () => void;
+  onUrlClick: () => void;
 }
 
-const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
+const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => {
   const [showAll, setShowAll] = useState(false);
   const { sendMessage, chatMessages, loading, currentSessionDocuments } =
     useWorkspace();
@@ -21,6 +22,10 @@ const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
   const [expandedSources, setExpandedSources] = useState<
     Record<string, boolean>
   >({});
+
+  // Determine if URL or PDF has been used in this session
+  const hasPdfUploaded = currentSessionDocuments.some(doc => doc.endsWith('.pdf'));
+  const hasUrlScraped = currentSessionDocuments.some(doc => !doc.endsWith('.pdf') && doc.startsWith('http'));
 
   const filteredMessages = chatMessages[workspaceId] || [];
 
@@ -118,7 +123,7 @@ const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
     );
   };
 
-  // 👇 Main JSX guarded safely
+  // Main JSX guarded safely
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow overflow-y-auto p-4 space-y-6 bg-gray-900">
@@ -156,7 +161,7 @@ const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
               </div>
             ))}
 
-            {/* 👇 Loading Bot Message Animation */}
+            {/* Loading Bot Message Animation */}
             {loading && (
               <div className="flex justify-start">
                 <div className="max-w-3xl rounded-lg p-4 bg-gray-800 text-white">
@@ -217,8 +222,20 @@ const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
               variant="ghost"
               className="text-gray-300 hover:text-white hover:bg-gray-700"
               title="Upload Document"
+              disabled={hasUrlScraped}
             >
               <Upload className="h-5 w-5" />
+            </Button>
+            
+            <Button
+              type="button"
+              onClick={onUrlClick}
+              variant="ghost"
+              className="text-gray-300 hover:text-white hover:bg-gray-700"
+              title="Scrape Website URL"
+              disabled={hasPdfUploaded}
+            >
+              <Link className="h-5 w-5" />
             </Button>
 
             <Input

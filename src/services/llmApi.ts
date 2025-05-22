@@ -1,4 +1,3 @@
-
 import { LLMResponse } from "@/types/api";
 import { v4 as uuidv4 } from "uuid";
 import { 
@@ -6,7 +5,8 @@ import {
   LLM_START_SESSION_ENDPOINT, 
   LLM_UPLOAD_PDF_ENDPOINT, 
   LLM_ASK_QUESTION_ENDPOINT,
-  LLM_LIST_FILES_ENDPOINT
+  LLM_LIST_FILES_ENDPOINT,
+  LLM_SCRAPE_URL_ENDPOINT
 } from "@/constants/api";
 
 export const llmApi = {
@@ -128,6 +128,35 @@ export const llmApi = {
     } catch (error) {
       console.error("Error fetching file list from LLM API:", error);
       return { success: false, files: [] };
+    }
+  },
+
+  scrapeUrl: async (url: string, sessionId: string): Promise<{ success: boolean; message?: string; chunks?: number }> => {
+    try {
+      const response = await fetch(LLM_SCRAPE_URL_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          url: url
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to scrape URL with LLM API");
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        message: data.message,
+        chunks: data.chunks
+      };
+    } catch (error) {
+      console.error("Error scraping URL with LLM API:", error);
+      return { success: false };
     }
   }
 };

@@ -1,14 +1,17 @@
+
 import React, { useState } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatView from "./ChatView";
 import UploadModal from "./UploadModal";
+import UrlModal from "./UrlModal";
 import UserMenu from "./UserMenu";
 
 const WorkspaceView = () => {
   const { selectedWorkspace } = useWorkspace();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
 
   if (!selectedWorkspace) {
     return (
@@ -29,12 +32,12 @@ const WorkspaceView = () => {
 
   return (
     <div className="flex flex-col h-full">
-
       <div className="flex-grow overflow-hidden">
         {selectedWorkspace.ws_id && (
           <ChatView
             workspaceId={selectedWorkspace.ws_id}
             onUploadClick={() => setIsUploadModalOpen(true)}
+            onUrlClick={() => setIsUrlModalOpen(true)}
           />
         )}
       </div>
@@ -42,6 +45,11 @@ const WorkspaceView = () => {
       <UploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
+      />
+      
+      <UrlModal
+        isOpen={isUrlModalOpen}
+        onClose={() => setIsUrlModalOpen(false)}
       />
     </div>
   );
