@@ -79,7 +79,7 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gradient-to-r from-gray-900 to-gray-800">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md space-y-8 p-8 bg-gray-800 rounded-lg shadow-xl border border-gray-700">
         <div className="flex justify-center">
           <img src={logoWhite} alt="Logo" className="w-64 h-auto mb-6" />

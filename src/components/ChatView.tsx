@@ -38,6 +38,12 @@ const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
 
   const handleSendMessage = async () => {
     if (!query.trim()) return;
+
+    if (!currentSessionDocuments || currentSessionDocuments.length === 0) {
+      toast.warning("Upload a document first");
+      return;
+    }
+
     try {
       await sendMessage(workspaceId, query);
       setQuery("");

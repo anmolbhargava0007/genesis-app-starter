@@ -125,19 +125,31 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   }, [selectedWorkspace?.ws_id, user?.user_id, selectedWorkspace?.session_id]);
 
   // Load session documents when session changes
-  useEffect(() => {
+useEffect(() => {
+  const loadDocumentsForWorkspace = async () => {
     if (selectedWorkspace?.ws_id && selectedWorkspace?.session_id) {
-      listUploadedFiles(selectedWorkspace.session_id)
-        .then((files) => {
-          if (files && files.length > 0) {
-            setCurrentSessionDocuments(files);
-          }
-        })
-        .catch((err) => {
-          console.error("Error loading session files:", err);
-        });
+      try {
+        const files = await listUploadedFiles(selectedWorkspace.session_id);
+        const docs = files && files.length > 0 ? files : [];
+        
+        setSessionDocuments((prev) => ({
+          ...prev,
+          [selectedWorkspace.ws_id!]: docs,
+        }));
+
+        setCurrentSessionDocuments(docs); // Always update, even if empty
+      } catch (err) {
+        console.error("Error loading session files:", err);
+        setCurrentSessionDocuments([]); // Reset to empty on error
+      }
+    } else {
+      setCurrentSessionDocuments([]); // Reset if no selected workspace
     }
-  }, [selectedWorkspace?.ws_id, selectedWorkspace?.session_id]);
+  };
+
+  loadDocumentsForWorkspace();
+}, [selectedWorkspace?.ws_id, selectedWorkspace?.session_id]);
+
 
   const loadLatestChatHistory = async (wsId: number, userId: number) => {
     try {
