@@ -13,7 +13,7 @@ export const llmApi = {
   startSession: async (): Promise<{ success: boolean; session_id?: string }> => {
     try {
       // This is a GET request
-      const response = await fetch(LLM_START_SESSION_ENDPOINT, {
+      const response = await fetch(`${LLM_API_BASE_URL}/start-session/`, {
         method: "GET",
       });
 

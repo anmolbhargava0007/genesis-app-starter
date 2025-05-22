@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  sbi-salesadvisor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sbi-salesadvisor-ui:latest
+    container_name: sbi-salesadvisor-ui
+    ports:
+      - "9898:9898"
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  backend:
+    image: sbi-salesadvisor:latest
+    container_name: sbi-salesadvisor
+    ports:
+      - "9898:9898"
+    restart: unless-stopped

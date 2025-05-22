@@ -1,7 +1,7 @@
 
 // API endpoints
-export const API_BASE_URL = "http://15.206.121.90:1909/api/v1";
-export const LLM_API_BASE_URL = "http://15.206.121.90:8000";
+export const API_BASE_URL = "http://3.111.95.184:1929/api/v1";
+export const LLM_API_BASE_URL = "http://3.111.95.184:8005";
 
 // LLM API endpoints
 export const LLM_START_SESSION_ENDPOINT = `${LLM_API_BASE_URL}/start-session/`;

@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -58,7 +57,7 @@ const DEFAULT_TEMPERATURE = 1.0;
 const DEFAULT_TOKEN_USAGE = 100;
 
 // Local storage key for session IDs
-const SESSION_IDS_STORAGE_KEY = 'workspace_session_ids';
+const SESSION_IDS_STORAGE_KEY = "workspace_session_ids";
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
@@ -73,8 +72,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     const savedSessionIds = localStorage.getItem(SESSION_IDS_STORAGE_KEY);
     return savedSessionIds ? JSON.parse(savedSessionIds) : {};
   });
-  const [sessionDocuments, setSessionDocuments] = useState<SessionDocumentsMap>({});
-  const [currentSessionDocuments, setCurrentSessionDocuments] = useState<string[]>([]);
+  const [sessionDocuments, setSessionDocuments] = useState<SessionDocumentsMap>(
+    {}
+  );
+  const [currentSessionDocuments, setCurrentSessionDocuments] = useState<
+    string[]
+  >([]);
 
   // Save session IDs to localStorage whenever they change
   useEffect(() => {
@@ -91,29 +94,29 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (selectedWorkspace?.ws_id && user?.user_id) {
       loadLatestChatHistory(selectedWorkspace.ws_id, user.user_id);
-      
+
       // If workspace has a session_id and is not yet in sessionIds, add it
       if (selectedWorkspace.session_id && selectedWorkspace.ws_id) {
         if (!sessionIds[selectedWorkspace.ws_id]) {
-          setSessionIds(prev => ({
+          setSessionIds((prev) => ({
             ...prev,
-            [selectedWorkspace.ws_id!]: selectedWorkspace.session_id!
+            [selectedWorkspace.ws_id!]: selectedWorkspace.session_id!,
           }));
         }
-        
+
         // Load session documents for the workspace
         if (selectedWorkspace.session_id) {
           listUploadedFiles(selectedWorkspace.session_id)
-            .then(files => {
+            .then((files) => {
               if (files && files.length > 0) {
-                setSessionDocuments(prev => ({
+                setSessionDocuments((prev) => ({
                   ...prev,
-                  [selectedWorkspace.ws_id!]: files
+                  [selectedWorkspace.ws_id!]: files,
                 }));
                 setCurrentSessionDocuments(files);
               }
             })
-            .catch(err => {
+            .catch((err) => {
               console.error("Error loading session files:", err);
             });
         }
@@ -125,12 +128,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (selectedWorkspace?.ws_id && selectedWorkspace?.session_id) {
       listUploadedFiles(selectedWorkspace.session_id)
-        .then(files => {
+        .then((files) => {
           if (files && files.length > 0) {
             setCurrentSessionDocuments(files);
           }
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error loading session files:", err);
         });
     }
@@ -139,84 +142,94 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const loadLatestChatHistory = async (wsId: number, userId: number) => {
     try {
       // Get all prompts for this workspace and user
-      const response = await promptHistoryApi.getAllSessionsForWorkspace(wsId, userId);
-      
-      if (response.success && Array.isArray(response.data) && response.data.length > 0) {
+      const response = await promptHistoryApi.getAllSessionsForWorkspace(
+        wsId,
+        userId
+      );
+
+      if (
+        response.success &&
+        Array.isArray(response.data) &&
+        response.data.length > 0
+      ) {
         // Group prompts by session
         const groupedBySession: Record<string, ChatPrompt[]> = {};
-        response.data.forEach(prompt => {
+        response.data.forEach((prompt) => {
           if (!groupedBySession[prompt.session_id]) {
             groupedBySession[prompt.session_id] = [];
           }
           groupedBySession[prompt.session_id].push(prompt);
         });
-        
+
         // Find the latest session (with highest prompt_id)
         let latestSession: string | null = null;
         let latestPromptId = -1;
-        
+
         Object.entries(groupedBySession).forEach(([sessionId, prompts]) => {
           // Find highest prompt_id in this session
-          const maxPromptId = Math.max(...prompts.map(p => p.prompt_id || 0));
+          const maxPromptId = Math.max(...prompts.map((p) => p.prompt_id || 0));
           if (maxPromptId > latestPromptId) {
             latestPromptId = maxPromptId;
             latestSession = sessionId;
           }
         });
-        
+
         if (latestSession) {
           // Store session ID for this workspace
-          setSessionIds(prev => ({
+          setSessionIds((prev) => ({
             ...prev,
-            [wsId]: latestSession
+            [wsId]: latestSession,
           }));
-          
+
           // Convert prompts to chat messages
           const chatPrompts = groupedBySession[latestSession];
           const formattedMessages: ChatMessage[] = [];
-          
-          chatPrompts.sort((a, b) => (a.prompt_id || 0) - (b.prompt_id || 0))
-            .forEach(prompt => {
+
+          chatPrompts
+            .sort((a, b) => (a.prompt_id || 0) - (b.prompt_id || 0))
+            .forEach((prompt) => {
               // Create user message
               const userMessage: ChatMessage = {
                 id: uuidv4(),
                 content: prompt.prompt_text,
-                type: 'user',
+                type: "user",
                 timestamp: Date.now() - 1000,
               };
-              
+
               // Create bot message
               const botMessage: ChatMessage = {
                 id: uuidv4(),
                 content: prompt.response_text,
-                type: 'bot',
+                type: "bot",
                 timestamp: Date.now(),
                 // Try to extract sources if available
                 sources: extractSourcesFromResponse(prompt.response_text),
               };
-              
+
               formattedMessages.push(userMessage, botMessage);
             });
-          
+
           // Update chat messages for this workspace
-          setChatMessages(prev => ({
+          setChatMessages((prev) => ({
             ...prev,
-            [wsId]: formattedMessages
+            [wsId]: formattedMessages,
           }));
-          
+
           // Extract document names (mock implementation)
-          setSessionDocuments(prev => ({
+          setSessionDocuments((prev) => ({
             ...prev,
-            [wsId]: extractDocumentNamesFromPrompts(chatPrompts)
+            [wsId]: extractDocumentNamesFromPrompts(chatPrompts),
           }));
-          
-          console.log(`Loaded ${formattedMessages.length} messages for workspace ${wsId}`);
+
+          console.log(
+            `Loaded ${formattedMessages.length} messages for workspace ${wsId}`
+          );
         }
       } else {
         // No history found, clear messages
-        setChatMessages(prev => ({
+        setChatMessages((prev) => ({
           ...prev,
-          [wsId]: []
+          [wsId]: [],
         }));
       }
     } catch (err) {
@@ -225,68 +238,67 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const loadPromptHistory = (prompt: ChatPrompt) => {
-    if (!selectedWorkspace?.ws_id || !prompt.ws_id || !prompt.session_id) return;
-    
+    if (!selectedWorkspace?.ws_id || !prompt.ws_id || !prompt.session_id)
+      return;
+
     try {
       // Find all prompts in this session
-      promptHistoryApi.getPrompts(
-        prompt.ws_id,
-        prompt.user_id,
-        prompt.session_id
-      ).then(response => {
-        if (response.success && Array.isArray(response.data)) {
-          // Convert to chat messages
-          const sortedPrompts = response.data.sort(
-            (a, b) => (a.prompt_id || 0) - (b.prompt_id || 0)
-          );
-          
-          const formattedMessages: ChatMessage[] = [];
-          
-          sortedPrompts.forEach(p => {
-            // Create user message
-            const userMessage: ChatMessage = {
-              id: uuidv4(),
-              content: p.prompt_text,
-              type: 'user',
-              timestamp: Date.now() - 1000,
-            };
-            
-            // Create bot message
-            const botMessage: ChatMessage = {
-              id: uuidv4(),
-              content: p.response_text,
-              type: 'bot',
-              timestamp: Date.now(),
-              // Try to extract sources if available
-              sources: extractSourcesFromResponse(p.response_text),
-            };
-            
-            formattedMessages.push(userMessage, botMessage);
-          });
-          
-          // Update chat messages for this workspace
-          setChatMessages(prev => ({
-            ...prev,
-            [selectedWorkspace.ws_id!]: formattedMessages
-          }));
-          
-          // Update session ID for this workspace
-          setSessionIds(prev => ({
-            ...prev,
-            [selectedWorkspace.ws_id!]: prompt.session_id
-          }));
-          
-          // Extract document names (mock implementation)
-          const documents = extractDocumentNamesFromPrompts(sortedPrompts);
-          setSessionDocuments(prev => ({
-            ...prev,
-            [selectedWorkspace.ws_id!]: documents
-          }));
-          setCurrentSessionDocuments(documents);
-          
-          toast.success("Loaded chat history");
-        }
-      });
+      promptHistoryApi
+        .getPrompts(prompt.ws_id, prompt.user_id, prompt.session_id)
+        .then((response) => {
+          if (response.success && Array.isArray(response.data)) {
+            // Convert to chat messages
+            const sortedPrompts = response.data.sort(
+              (a, b) => (a.prompt_id || 0) - (b.prompt_id || 0)
+            );
+
+            const formattedMessages: ChatMessage[] = [];
+
+            sortedPrompts.forEach((p) => {
+              // Create user message
+              const userMessage: ChatMessage = {
+                id: uuidv4(),
+                content: p.prompt_text,
+                type: "user",
+                timestamp: Date.now() - 1000,
+              };
+
+              // Create bot message
+              const botMessage: ChatMessage = {
+                id: uuidv4(),
+                content: p.response_text,
+                type: "bot",
+                timestamp: Date.now(),
+                // Try to extract sources if available
+                sources: extractSourcesFromResponse(p.response_text),
+              };
+
+              formattedMessages.push(userMessage, botMessage);
+            });
+
+            // Update chat messages for this workspace
+            setChatMessages((prev) => ({
+              ...prev,
+              [selectedWorkspace.ws_id!]: formattedMessages,
+            }));
+
+            // Update session ID for this workspace
+            setSessionIds((prev) => ({
+              ...prev,
+              [selectedWorkspace.ws_id!]: prompt.session_id,
+            }));
+
+            // Extract document names (mock implementation)
+            const documents = extractDocumentNamesFromPrompts(sortedPrompts);
+            setSessionDocuments((prev) => ({
+              ...prev,
+              [selectedWorkspace.ws_id!]: documents,
+            }));
+            setCurrentSessionDocuments(documents);
+
+            toast.success("Loaded chat history");
+          }
+        });
     } catch (err) {
       console.error("Failed to load prompt history:", err);
       toast.error("Failed to load chat history");
@@ -295,17 +307,17 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const extractDocumentNamesFromPrompts = (prompts: ChatPrompt[]): string[] => {
     const documents: string[] = [];
-    
+
     // Look for document mentions in responses
-    prompts.forEach(prompt => {
+    prompts.forEach((prompt) => {
       const responseText = prompt.response_text || "";
-      
+
       // This is a simplified approach - in a real app, you'd have proper metadata
       if (responseText.includes("invoice_") || responseText.includes(".pdf")) {
         const regex = /([a-zA-Z0-9_-]+\.pdf)/g;
         const matches = responseText.match(regex);
         if (matches) {
-          matches.forEach(match => {
+          matches.forEach((match) => {
             if (!documents.includes(match)) {
               documents.push(match);
             }
@@ -313,10 +325,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     });
-    
+
     return documents;
   };
-  
+
   // Helper function to try to extract source information from response text
   const extractSourcesFromResponse = (responseText: string): any[] => {
     try {
@@ -371,12 +383,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               const docs = await documentApi.getAll(workspace.ws_id);
               workspace.documents = docs;
               workspace.fileCount = docs.length;
-              
-              // If workspace has a session_id, store it
+
               if (workspace.session_id && workspace.ws_id) {
-                setSessionIds(prev => ({
+                setSessionIds((prev) => ({
                   ...prev,
-                  [workspace.ws_id!]: workspace.session_id!
+                  [workspace.ws_id!]: workspace.session_id!,
                 }));
               }
             }
@@ -425,14 +436,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
       // First, create a session with the LLM API
       const sessionResponse = await llmApi.startSession();
-      
+
       if (!sessionResponse.success || !sessionResponse.session_id) {
         toast.error("Failed to initialize the AI session");
         return;
       }
-      
+
       const sessionId = sessionResponse.session_id;
-      
+
       console.log(`Created new session ID: ${sessionId}`);
 
       // Then, create the workspace in the backend, including the session_id
@@ -440,21 +451,27 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         ws_name: name,
         user_id: user.user_id,
         is_active: true,
-        session_id: sessionId
+        session_id: sessionId,
       };
 
       const response = await workspaceApi.create(newWorkspace);
-      
-      if (response.success && response.data.ws_id) {
-        // Save the session ID for this workspace
-        setSessionIds(prev => ({
+      console.log("Create response:", response);
+
+      const workspaceData = Array.isArray(response.data)
+        ? response.data[0]
+        : response.data;
+
+      if (response.success && workspaceData?.ws_id) {
+        setSessionIds((prev) => ({
           ...prev,
-          [response.data.ws_id]: sessionId
+          [workspaceData.ws_id]: sessionId,
         }));
-        
-        console.log(`Associated session ID ${sessionId} with workspace ${response.data.ws_id}`);
+
+        console.log(
+          `Associated session ID ${sessionId} with workspace ${workspaceData.ws_id}`
+        );
         toast.success("Workspace created successfully");
-        
+
         await refreshWorkspaces();
       } else {
         toast.error("Failed to create workspace");
@@ -555,25 +572,27 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Get the session ID for this workspace
-      let sessionId = selectedWorkspace.ws_id ? 
-        (selectedWorkspace.session_id || sessionIds[selectedWorkspace.ws_id]) : 
-        undefined;
-      
+      let sessionId = selectedWorkspace.ws_id
+        ? selectedWorkspace.session_id || sessionIds[selectedWorkspace.ws_id]
+        : undefined;
+
       if (!sessionId) {
         toast.error("No session found for this workspace");
         return false;
       }
-      
+
       // Upload document to LLM API using the session ID
       try {
         const result = await llmApi.uploadDocument(file, sessionId);
-        
+
         if (result.success) {
-          toast.success(result.message || "Document uploaded successfully to AI");
-          
+          toast.success(
+            result.message || "Document uploaded successfully to AI"
+          );
+
           // Update session documents
           if (selectedWorkspace.ws_id) {
-            setSessionDocuments(prev => {
+            setSessionDocuments((prev) => {
               const currentDocs = prev[selectedWorkspace.ws_id!] || [];
               const newDocs = [...currentDocs];
               if (!currentDocs.includes(file.name)) {
@@ -581,12 +600,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               }
               return {
                 ...prev,
-                [selectedWorkspace.ws_id!]: newDocs
+                [selectedWorkspace.ws_id!]: newDocs,
               };
             });
-            
+
             // Update current session documents
-            setCurrentSessionDocuments(prevDocs => {
+            setCurrentSessionDocuments((prevDocs) => {
               if (!prevDocs.includes(file.name)) {
                 return [...prevDocs, file.name];
               }
@@ -657,7 +676,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         toast.error("User not authenticated");
         return;
       }
-      
+
       setLoading(true);
 
       // Add user message to state immediately
@@ -677,9 +696,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       });
 
       // Get session ID for this workspace
-      const workspace = workspaces.find(w => w.ws_id === workspaceId);
+      const workspace = workspaces.find((w) => w.ws_id === workspaceId);
       const sessionId = workspace?.session_id || sessionIds[workspaceId];
-      
+
       if (!sessionId) {
         throw new Error("No session found. Please upload a document first.");
       }
@@ -715,9 +734,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           ws_id: workspaceId,
           user_id: user.user_id,
           session_id: sessionId,
-          is_active: true
+          is_active: true,
         };
-        
+
         await promptHistoryApi.savePrompt(promptData);
       } catch (saveErr) {
         console.error("Failed to save prompt history:", saveErr);
@@ -732,7 +751,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const errorBotMessage: ChatMessage = {
         id: uuidv4(),
         content:
-          err instanceof Error ? err.message : "Sorry, I couldn't process your request. Please try again later.",
+          err instanceof Error
+            ? err.message
+            : "Sorry, I couldn't process your request. Please try again later.",
         type: "bot",
         timestamp: Date.now(),
       };
@@ -765,7 +786,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     loadPromptHistory,
     chatMessages,
     currentSessionDocuments,
-    listUploadedFiles
+    listUploadedFiles,
   };
 
   return (

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Upload, FileText } from "lucide-react";
+import { Send, Upload, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { ChatMessage, LLMSource } from "@/types/api";
 import { v4 as uuidv4 } from "uuid";
@@ -13,6 +13,7 @@ interface ChatViewProps {
 }
 
 const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
+  const [showAll, setShowAll] = useState(false);
   const { sendMessage, chatMessages, loading, currentSessionDocuments } =
     useWorkspace();
   const [query, setQuery] = useState("");
@@ -21,18 +22,22 @@ const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
     Record<string, boolean>
   >({});
 
-  // 👇 Scroll to bottom when chat messages or workspace change
+  const filteredMessages = chatMessages[workspaceId] || [];
+
+  const visibleDocs = showAll
+    ? currentSessionDocuments
+    : currentSessionDocuments?.slice(0, 3) ?? [];
+
+  // Scroll to bottom
   useEffect(() => {
     const timeout = setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
-
     return () => clearTimeout(timeout);
   }, [workspaceId, chatMessages]);
 
   const handleSendMessage = async () => {
     if (!query.trim()) return;
-
     try {
       await sendMessage(workspaceId, query);
       setQuery("");
@@ -48,8 +53,6 @@ const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
       handleSendMessage();
     }
   };
-
-  const filteredMessages = chatMessages[workspaceId] || [];
 
   const toggleSources = (messageId: string) => {
     setExpandedSources((prev) => ({
@@ -109,10 +112,11 @@ const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
     );
   };
 
+  // 👇 Main JSX guarded safely
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow overflow-y-auto p-4 space-y-6 bg-gray-900">
-        {filteredMessages.length === 0 ? (
+        {currentSessionDocuments.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
             <FileText className="h-16 w-16 mb-4 text-gray-400" />
             <h2 className="text-2xl font-semibold mb-2">
@@ -160,33 +164,45 @@ const ChatView = ({ workspaceId, onUploadClick }: ChatViewProps) => {
             )}
           </>
         )}
-
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
       <div className="border-t border-gray-700 bg-gray-800 flex justify-start items-center">
         <div className="flex flex-wrap md:flex-nowrap gap-6 items-center justify-center w-full max-w-6xl">
-          {currentSessionDocuments.length > 0 && (
-            <div className="border-b border-gray-700 p-3 flex-shrink-0 bg-gray-800">
-              <div className="flex items-center mb-1">
-                <FileText className="h-2 w-2 mr-2 text-[#A259FF]" />
-                <span className="text-sm font-medium text-gray-300">
-                  Current Session Documents:
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {currentSessionDocuments.map((doc, index) => (
-                  <div
-                    key={index}
-                    className="bg-gray-700 text-xs px-2 py-1 rounded flex items-center"
-                  >
-                    <span className="text-[#A259FF]">{doc}</span>
-                  </div>
-                ))}
-              </div>
+          <div className="border-b border-gray-700 p-3 flex-shrink-0 bg-gray-800">
+            <div className="flex items-center mb-1">
+              <FileText className="h-2 w-2 mr-2 text-[#A259FF]" />
+              <span className="text-sm font-medium text-gray-300">
+                Current Session Documents:
+              </span>
             </div>
-          )}
+
+            <div className="flex flex-wrap gap-2">
+              {visibleDocs.map((doc, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-700 text-xs px-2 py-1 rounded flex items-center"
+                >
+                  <span className="text-[#A259FF]">{doc}</span>
+                </div>
+              ))}
+            </div>
+
+            {currentSessionDocuments.length > 3 && (
+              <button
+                onClick={() => setShowAll(!showAll)}
+                className="mt-2 text-xs text-[#A259FF] hover:underline flex items-center"
+              >
+                {showAll ? "Show Less" : "Show More"}
+                {showAll ? (
+                  <ChevronUp className="h-3 w-3 ml-1" />
+                ) : (
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                )}
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center gap-3 flex-1">
             <Button
