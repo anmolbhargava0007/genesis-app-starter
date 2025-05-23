@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { FileText } from "lucide-react";
+import { FileText, Link } from "lucide-react";
 import ChatView from "./ChatView";
 import UploadModal from "./UploadModal";
 import UrlModal from "./UrlModal";
@@ -19,15 +19,15 @@ const WorkspaceView = () => {
 
   // Handle modal open based on session type
   const handleUploadClick = () => {
-    // Only allow opening if no URL has been scraped
+    // Allow PDF uploads if no URL has been scraped
     if (currentSessionType !== 'url') {
       setIsUploadModalOpen(true);
     }
   };
 
   const handleUrlClick = () => {
-    // Only allow opening if no PDF has been uploaded
-    if (currentSessionType !== 'pdf') {
+    // Only allow opening if no PDF has been uploaded and no URL has been scraped
+    if (currentSessionType !== 'pdf' && currentSessionType !== 'url') {
       setIsUrlModalOpen(true);
     }
   };

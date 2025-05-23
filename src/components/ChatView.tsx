@@ -36,6 +36,25 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
   const isUrlSession = currentSessionType === 'url';
   const isEmptySession = currentSessionType === 'empty';
 
+  // Get domain name from URL for display
+  const getWebsiteDomain = (url: string): string => {
+    try {
+      if (!url) return "";
+      if (!url.startsWith('http')) url = 'https://' + url;
+      const domain = new URL(url).hostname;
+      return domain.startsWith('www.') ? domain : 'www.' + domain;
+    } catch (e) {
+      return url;
+    }
+  };
+
+  // Get website display name
+  const getScrapedWebsite = (): string => {
+    if (!isUrlSession || currentSessionDocuments.length === 0) return "";
+    const url = currentSessionDocuments.find(doc => doc.startsWith('http'));
+    return url ? getWebsiteDomain(url) : "";
+  };
+
   const filteredMessages = chatMessages[workspaceId] || [];
 
   const visibleDocs = showAll
@@ -207,39 +226,54 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
       {/* Input Area */}
       <div className="border-t border-gray-700 bg-gray-800 flex justify-start items-center">
         <div className="flex flex-wrap md:flex-nowrap gap-6 items-center justify-center w-full max-w-6xl">
-          {/* Only show document section for PDFs, not for scraped URLs */}
-          {isPdfSession && (
-            <div className="border-b border-gray-700 p-3 flex-shrink-0 bg-gray-800">
+          {/* Document/URL Session Info Section */}
+          {!isEmptySession && (
+            <div className="border-b border-gray-700 p-3 flex-shrink-0 bg-gray-800 w-full">
               <div className="flex items-center mb-1">
-                <FileText className="h-2 w-2 mr-2 text-[#A259FF]" />
-                <span className="text-sm font-medium text-gray-300">
-                  Current Session Documents:
-                </span>
+                {isUrlSession ? (
+                  <>
+                    <Link className="h-4 w-4 mr-2 text-[#A259FF]" />
+                    <span className="text-sm font-medium text-gray-300">
+                      Current Scraped Website: {getScrapedWebsite()}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2 text-[#A259FF]" />
+                    <span className="text-sm font-medium text-gray-300">
+                      Current Session Documents:
+                    </span>
+                  </>
+                )}
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {visibleDocs.map((doc, index) => (
-                  <div
-                    key={index}
-                    className="bg-gray-700 text-xs px-2 py-1 rounded flex items-center"
-                  >
-                    <span className="text-[#A259FF]">{doc}</span>
+              {isPdfSession && (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    {visibleDocs.map((doc, index) => (
+                      <div
+                        key={index}
+                        className="bg-gray-700 text-xs px-2 py-1 rounded flex items-center"
+                      >
+                        <span className="text-[#A259FF]">{doc}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              {currentSessionDocuments.length > 3 && (
-                <button
-                  onClick={() => setShowAll(!showAll)}
-                  className="mt-2 text-xs text-[#A259FF] hover:underline flex items-center"
-                >
-                  {showAll ? "Show Less" : "Show More"}
-                  {showAll ? (
-                    <ChevronUp className="h-3 w-3 ml-1" />
-                  ) : (
-                    <ChevronDown className="h-3 w-3 ml-1" />
+                  {currentSessionDocuments.length > 3 && (
+                    <button
+                      onClick={() => setShowAll(!showAll)}
+                      className="mt-2 text-xs text-[#A259FF] hover:underline flex items-center"
+                    >
+                      {showAll ? "Show Less" : "Show More"}
+                      {showAll ? (
+                        <ChevronUp className="h-3 w-3 ml-1" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3 ml-1" />
+                      )}
+                    </button>
                   )}
-                </button>
+                </>
               )}
             </div>
           )}
@@ -254,7 +288,6 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
                   variant="ghost"
                   className="text-gray-300 hover:text-white hover:bg-gray-700"
                   title="Upload Document"
-                  disabled={isUrlSession}
                 >
                   <Upload className="h-5 w-5" />
                 </Button>
@@ -265,7 +298,6 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
                   variant="ghost"
                   className="text-gray-300 hover:text-white hover:bg-gray-700"
                   title="Scrape Website URL"
-                  disabled={isPdfSession}
                 >
                   <Link className="h-5 w-5" />
                 </Button>

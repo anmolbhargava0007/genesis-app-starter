@@ -43,13 +43,24 @@ export const authApi = {
     return handleResponse<{ data: UserForManagement[] }>(response);
   },
 
-  updateUser: async (userData: UserForManagement): Promise<AuthResponse> => {
+  updateUser: async (userData: UserForManagement | User): Promise<AuthResponse> => {
     const response = await fetch(`${API_BASE_URL}/api/v1/user`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(userData),
+    });
+    return handleResponse<AuthResponse>(response);
+  },
+
+  forgotPassword: async (email: string): Promise<AuthResponse> => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/signin-forgotpwd`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ user_email: email }),
     });
     return handleResponse<AuthResponse>(response);
   },
