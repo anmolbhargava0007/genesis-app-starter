@@ -145,8 +145,17 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
             .then((files) => {
               if (files && files.length > 0) {
                 // Determine session type based on file extensions
-                const type = files.some(file => file.endsWith('.pdf')) ? 'pdf' : 
-                             files.some(file => file.startsWith('http')) ? 'url' : 'empty';
+                const hasPdfs = files.some(file => file.endsWith('.pdf'));
+                const hasUrls = files.some(file => file.startsWith('http'));
+                
+                let type: SessionType = 'empty';
+                if (hasPdfs && hasUrls) {
+                  type = 'pdf'; // Mixed type, default to 'pdf' for backwards compatibility
+                } else if (hasPdfs) {
+                  type = 'pdf';
+                } else if (hasUrls) {
+                  type = 'url';
+                }
                 
                 // Store the session type
                 setSessionTypes((prev) => ({
@@ -183,9 +192,15 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           
           // Determine session type based on files
           let type: SessionType = 'empty';
-          if (docs.length > 0) {
-            type = docs.some(doc => doc.endsWith('.pdf')) ? 'pdf' : 
-                   docs.some(doc => doc.startsWith('http')) ? 'url' : 'empty';
+          const hasPdfs = docs.some(doc => doc.endsWith('.pdf'));
+          const hasUrls = docs.some(doc => doc.startsWith('http'));
+          
+          if (hasPdfs && hasUrls) {
+            type = 'pdf'; // Mixed type, default to 'pdf' for backwards compatibility
+          } else if (hasPdfs) {
+            type = 'pdf';
+          } else if (hasUrls) {
+            type = 'url';
           }
           
           // Update session type
@@ -296,10 +311,16 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           const documents = extractDocumentNamesFromPrompts(chatPrompts);
           
           // Determine session type based on documents
+          const hasPdfs = documents.some(doc => doc.endsWith('.pdf'));
+          const hasUrls = documents.some(doc => doc.startsWith('http'));
+          
           let sessionType: SessionType = 'empty';
-          if (documents.length > 0) {
-            sessionType = documents.some(doc => doc.endsWith('.pdf')) ? 'pdf' : 
-                          documents.some(doc => doc.startsWith('http')) ? 'url' : 'empty';
+          if (hasPdfs && hasUrls) {
+            sessionType = 'pdf'; // Mixed type defaults to 'pdf'
+          } else if (hasPdfs) {
+            sessionType = 'pdf';
+          } else if (hasUrls) {
+            sessionType = 'url';
           }
           
           // Update session type
@@ -396,10 +417,16 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
             const documents = extractDocumentNamesFromPrompts(sortedPrompts);
             
             // Determine session type based on documents
+            const hasPdfs = documents.some(doc => doc.endsWith('.pdf'));
+            const hasUrls = documents.some(doc => doc.startsWith('http'));
+            
             let sessionType: SessionType = 'empty';
-            if (documents.length > 0) {
-              sessionType = documents.some(doc => doc.endsWith('.pdf')) ? 'pdf' : 
-                            documents.some(doc => doc.startsWith('http')) ? 'url' : 'empty';
+            if (hasPdfs && hasUrls) {
+              sessionType = 'pdf'; // Mixed type defaults to 'pdf'
+            } else if (hasPdfs) {
+              sessionType = 'pdf';
+            } else if (hasUrls) {
+              sessionType = 'url';
             }
             
             // Update session type
@@ -448,7 +475,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Look for PDF filenames
-      if (responseText.includes("invoice_") || responseText.includes(".pdf")) {
+      if (responseText.includes(".pdf")) {
         const regex = /([a-zA-Z0-9_-]+\.pdf)/g;
         const matches = responseText.match(regex);
         if (matches) {
@@ -729,16 +756,6 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
-      // Check current session type
-      const wsId = selectedWorkspace.ws_id!;
-      const currentType = sessionTypes[wsId] || 'empty';
-      
-      // If session already contains a URL, don't allow PDF upload
-      if (currentType === 'url') {
-        toast.error("This workspace already contains a scraped URL. Create a new workspace for PDF documents.");
-        return false;
-      }
-
       // Upload document to LLM API using the session ID
       try {
         const result = await llmApi.uploadDocument(file, sessionId);
@@ -748,13 +765,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
             result.message || "Document uploaded successfully to AI"
           );
 
-          // Update session type to PDF
-          setSessionTypes((prev) => ({
-            ...prev,
-            [wsId]: 'pdf'
-          }));
+          // Update session type
+          const wsId = selectedWorkspace.ws_id!;
+          const currentType = sessionTypes[wsId] || 'empty';
           
-          setCurrentSessionType('pdf');
+          // Update to PDF type if it was empty, or leave as is
+          if (currentType === 'empty') {
+            setSessionTypes((prev) => ({
+              ...prev,
+              [wsId]: 'pdf'
+            }));
+            setCurrentSessionType('pdf');
+          }
 
           // Update session documents
           setSessionDocuments((prev) => {
@@ -866,8 +888,6 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       if (!sessionId) {
         throw new Error("No session found. Please create a new workspace.");
       }
-      
-      const sessionType = sessionTypes[workspaceId] || 'empty';
 
       const response = await llmApi.query(message, sessionId);
 
@@ -953,22 +973,6 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
-      // Check current session type
-      const wsId = selectedWorkspace.ws_id!;
-      const currentType = sessionTypes[wsId] || 'empty';
-      
-      // If session already contains PDFs, don't allow URL scraping
-      if (currentType === 'pdf') {
-        toast.error("This workspace already contains PDF documents. Create a new workspace for URL scraping.");
-        return false;
-      }
-      
-      // If session already contains a URL, don't allow another URL
-      if (currentType === 'url' && sessionDocuments[wsId]?.length > 0) {
-        toast.error("This workspace already contains a scraped URL. Create a new workspace for another URL.");
-        return false;
-      }
-
       // Scrape URL using the LLM API
       try {
         const result = await llmApi.scrapeUrl(url, sessionId);
@@ -976,13 +980,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         if (result.success) {
           toast.success(result.message || "URL scraped successfully");
 
-          // Update session type to URL
-          setSessionTypes((prev) => ({
-            ...prev,
-            [wsId]: 'url'
-          }));
+          // Update session type if necessary
+          const wsId = selectedWorkspace.ws_id!;
+          const currentType = sessionTypes[wsId] || 'empty';
           
-          setCurrentSessionType('url');
+          // Update to URL type if it was empty, or leave as is
+          if (currentType === 'empty') {
+            setSessionTypes((prev) => ({
+              ...prev,
+              [wsId]: 'url'
+            }));
+            setCurrentSessionType('url');
+          }
 
           // Update session documents to include the URL
           setSessionDocuments((prev) => {

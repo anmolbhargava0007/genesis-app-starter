@@ -1,4 +1,3 @@
-
 import { LLMResponse } from "@/types/api";
 import { v4 as uuidv4 } from "uuid";
 import { 
@@ -136,9 +135,25 @@ export const llmApi = {
       }
 
       const data = await response.json();
+      
+      // Handle both PDF files and scraped URLs in the response
+      let files: string[] = [];
+      
+      if (data.files && Array.isArray(data.files)) {
+        // Parse the files array
+        files = data.files.map((file: string) => {
+          // If the file is a scraped URL, return it directly
+          if (file.startsWith('http://') || file.startsWith('https://')) {
+            return file;
+          }
+          // Otherwise return the filename (PDF or other file type)
+          return file;
+        });
+      }
+      
       return {
         success: true,
-        files: data.files || []
+        files: files
       };
     } catch (error) {
       console.error("Error fetching file list from LLM API:", error);

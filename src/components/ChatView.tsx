@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { Button } from "@/components/ui/button";
@@ -9,10 +10,19 @@ import {
   ChevronDown,
   ChevronUp,
   Link,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ChatMessage, LLMSource } from "@/types/api";
 import SessionIndicator from "./SessionIndicator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
 interface ChatViewProps {
   workspaceId: number;
   onUploadClick: () => void;
@@ -32,6 +42,7 @@ const ChatView = ({
     loading,
     currentSessionDocuments,
     currentSessionType,
+    selectedWorkspace,
   } = useWorkspace();
   const [query, setQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -46,6 +57,7 @@ const ChatView = ({
   const isPdfSession = currentSessionType === "pdf";
   const isUrlSession = currentSessionType === "url";
   const isEmptySession = currentSessionType === "empty";
+  const hasDocuments = currentSessionDocuments.length > 0;
 
   // Get domain name from URL for display
   const getWebsiteDomain = (url: string): string => {
@@ -61,16 +73,12 @@ const ChatView = ({
 
   // Get website display name
   const getScrapedWebsite = (): string => {
-    if (!isUrlSession || currentSessionDocuments.length === 0) return "";
+    if (!currentSessionDocuments.length) return "";
     const url = currentSessionDocuments.find((doc) => doc.startsWith("http"));
     return url ? getWebsiteDomain(url) : "";
   };
 
   const filteredMessages = chatMessages[workspaceId] || [];
-
-  const visibleDocs = showAll
-    ? currentSessionDocuments
-    : currentSessionDocuments?.slice(0, 3) ?? [];
 
   // Scroll to bottom
   useEffect(() => {
@@ -80,24 +88,23 @@ const ChatView = ({
     return () => clearTimeout(timeout);
   }, [workspaceId, chatMessages]);
 
-const handleSendMessage = async () => {
-  if (!query.trim()) return;
+  const handleSendMessage = async () => {
+    if (!query.trim()) return;
 
-  // Prevent sending if no session (PDF or URL) is active
-  if (!hasChatHistory && isEmptySession) {
-    toast.warning("First upload a PDF or scrape a URL before sending a message.");
-    return;
-  }
+    // Allow sending if there are any documents in the session or if there's already chat history
+    if (!hasDocuments && !hasChatHistory) {
+      toast.warning("Please upload a PDF or scrape a URL before sending a message.");
+      return;
+    }
 
-  try {
-    await sendMessage(workspaceId, query);
-    setQuery("");
-  } catch (error) {
-    console.error("Failed to send message:", error);
-    toast.error("Failed to send message");
-  }
-};
-
+    try {
+      await sendMessage(workspaceId, query);
+      setQuery("");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
+    }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -201,7 +208,6 @@ const handleSendMessage = async () => {
             <h2 className="text-2xl font-semibold mb-2">
               Start a conversation
             </h2>
-
           </div>
         )}
 
@@ -219,47 +225,26 @@ const handleSendMessage = async () => {
       </div>
 
       {/* Input area */}
-      {/* Input area */}
       <div className="bg-gray-900 border-t border-gray-700 sticky bottom-0 z-10 px-4 py-3">
         <div className="flex items-center gap-2 max-w-4xl mx-auto">
           <Button onClick={() => setIsModalOpen(true)}>View Session</Button>
-          {isModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-              <div className="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-lg relative">
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="absolute top-2 right-2 text-white hover:text-red-500"
-                >
-                  ✕
-                </button>
-                <SessionIndicator
-                  isUrlSession={isUrlSession}
-                  isPdfSession={isPdfSession}
-                  getScrapedWebsite={getScrapedWebsite}
-                  currentSessionDocuments={currentSessionDocuments}
-                />
-              </div>
-            </div>
-          )}
 
-          {/* Upload PDF: Enabled unless URL session is active */}
+          {/* PDF Upload Button - Always enabled */}
           <Button
             variant="ghost"
             size="icon"
             onClick={onUploadClick}
             className="hover:bg-gray-700 text-gray-300"
-            disabled={isUrlSession}
           >
             <Upload />
           </Button>
 
-          {/* Scrape URL: Enabled only in empty session */}
+          {/* URL Scrape Button - Always enabled */}
           <Button
             variant="ghost"
             size="icon"
             onClick={onUrlClick}
             className="hover:bg-gray-700 text-gray-300"
-            disabled={isPdfSession || isUrlSession}
           >
             <Link />
           </Button>
@@ -282,6 +267,26 @@ const handleSendMessage = async () => {
           </Button>
         </div>
       </div>
+
+      {/* Session Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-md bg-gray-900 text-white">
+          <DialogHeader>
+            <DialogTitle>Current Session</DialogTitle>
+          </DialogHeader>
+          
+          <SessionIndicator
+            isUrlSession={isUrlSession}
+            isPdfSession={isPdfSession}
+            getScrapedWebsite={getScrapedWebsite}
+            currentSessionDocuments={currentSessionDocuments}
+          />
+          
+          <DialogFooter>
+            <Button onClick={() => setIsModalOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

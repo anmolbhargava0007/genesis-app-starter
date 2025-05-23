@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Link } from "lucide-react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { toast } from "sonner";
-import { llmApi } from "@/services/llmApi";
 
 interface UrlModalProps {
   isOpen: boolean;
@@ -21,13 +20,25 @@ interface UrlModalProps {
 }
 
 const UrlModal = ({ isOpen, onClose }: UrlModalProps) => {
-  const { selectedWorkspace, scrapeUrl } = useWorkspace();
+  const { selectedWorkspace, scrapeUrl, currentSessionDocuments } = useWorkspace();
   const [url, setUrl] = useState<string>("");
   const [processing, setProcessing] = useState<boolean>(false);
 
   const handleScrapeUrl = async () => {
     if (!url.trim() || !selectedWorkspace?.session_id) {
       toast.error("Please enter a valid URL");
+      return;
+    }
+
+    // Check if this URL has already been scraped
+    const normalizedUrl = url.toLowerCase().trim();
+    const isDuplicate = currentSessionDocuments.some(doc => {
+      return doc.toLowerCase() === normalizedUrl ||
+             doc.toLowerCase() === normalizedUrl.replace(/^https?:\/\//, '');
+    });
+
+    if (isDuplicate) {
+      toast.warning("This URL has already been scraped");
       return;
     }
 

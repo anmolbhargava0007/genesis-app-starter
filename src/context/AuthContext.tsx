@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useContext,
@@ -20,6 +21,7 @@ interface AuthContextType {
   signin: (credentials: SigninRequest) => Promise<boolean>;
   signup: (userData: SignupRequest) => Promise<boolean>;
   logout: () => void;
+  updateUserData: (updatedUser: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -145,7 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     toast.success("Logged out successfully");
     navigate("/signin");
   };
-    const updateUserData = (updatedUser: User) => {
+
+  const updateUserData = (updatedUser: User) => {
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
