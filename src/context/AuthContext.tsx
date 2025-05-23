@@ -1,180 +1,179 @@
-
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { toast } from 'sonner';
-import { User } from '@/types/auth';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { useNavigate } from "react-router-dom";
+import { User, SigninRequest, SignupRequest, AuthResponse } from "@/types/auth";
+import { toast } from "sonner";
+import { authApi } from "@/services/authApi";
 
 interface AuthContextType {
   user: User | null;
+  isAuthenticated: boolean;
+  loading: boolean;
   userRole: number;
   expiryDate: string | null;
-  signin: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string, mobile: string, gender: string) => Promise<void>;
+  isAppValid: boolean;
+  signin: (credentials: SigninRequest) => Promise<boolean>;
+  signup: (userData: SignupRequest) => Promise<boolean>;
   logout: () => void;
-  loading: boolean;
-  updateUserData: (updatedUser: User) => void;
 }
 
-export const AuthContext = createContext<AuthContextType>({
-  user: null,
-  userRole: 1,
-  expiryDate: null,
-  signin: async () => {},
-  signup: async () => {},
-  logout: () => {},
-  loading: false,
-  updateUserData: () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<number>(1);
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<number>(2); // Default to GUEST
   const [expiryDate, setExpiryDate] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [isAppValid, setIsAppValid] = useState<boolean>(true);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Check if user is already logged in
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('auth_token');
-    
-    if (storedUser && storedToken) {
+    // Check if user data exists in localStorage
+    const storedUser = localStorage.getItem("user");
+    const storedRole = localStorage.getItem("userRole");
+    const storedExpiryDate = localStorage.getItem("expiryDate");
+    const storedIsAppValid = localStorage.getItem("isAppValid");
+
+    if (storedUser) {
       try {
-        const userData = JSON.parse(storedUser) as User;
-        setUser(userData);
-        setUserRole(userData.role_id || 1);
-        
-        // Set expiry date (sample)
-        const expiryDateValue = localStorage.getItem('expiry_date') || '2025-12-31';
-        setExpiryDate(expiryDateValue);
+        setUser(JSON.parse(storedUser));
+        if (storedRole) setUserRole(parseInt(storedRole, 10));
+        if (storedExpiryDate) setExpiryDate(storedExpiryDate);
+        if (storedIsAppValid) setIsAppValid(storedIsAppValid === "true");
       } catch (error) {
-        console.error('Failed to parse stored user data:', error);
-        logout();
+        console.error("Failed to parse user data:", error);
+        localStorage.removeItem("user");
+        localStorage.removeItem("userRole");
+        localStorage.removeItem("expiryDate");
+        localStorage.removeItem("isAppValid");
       }
     }
-    
+
     setLoading(false);
   }, []);
 
-  // Protected routes redirect logic
-  useEffect(() => {
-    if (!loading) {
-      const isAuthRoute = location.pathname === '/signin' || location.pathname === '/signup' || location.pathname === '/';
-      
-      if (!user && !isAuthRoute) {
-        navigate('/signin');
-      } else if (user && isAuthRoute) {
-        navigate('/dashboard');
-      }
-    }
-  }, [user, loading, location.pathname, navigate]);
-
-  const signin = async (email: string, password: string) => {
+  const signin = async (credentials: SigninRequest): Promise<boolean> => {
     try {
-      setLoading(true);
-      
-      // Make API call here
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/signin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_email: email, user_pwd: password }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to sign in');
-      }
-      
-      if (data.success && data.data && data.data.token) {
-        // Store user data and token
-        localStorage.setItem('auth_token', data.data.token);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-        localStorage.setItem('expiry_date', '2025-12-31'); // Sample expiry date
-        
-        // Update state
-        setUser(data.data.user);
-        setUserRole(data.data.user.role_id || 1);
-        setExpiryDate('2025-12-31');
-        
-        toast.success('Signed in successfully');
-        navigate('/dashboard');
+      const response = await authApi.signin(credentials);
+
+      if (response.success && response.data && response.data.length > 0) {
+        if (!response.is_app_valid) {
+          toast.error(
+            "You have consumed the free tier of Prototype, please connect with Product team to enable the features."
+          );
+          return false;
+        }
+
+        const userData = response.data[0];
+
+        // Set user role from response
+        let roleId = 2; // Default to GUEST
+        if (userData.pi_roles && userData.pi_roles.length > 0) {
+          roleId = userData.pi_roles[0].role_id;
+        }
+
+        setUser(userData);
+        setUserRole(roleId);
+        setExpiryDate(response.expiry_date || null);
+        setIsAppValid(response.is_app_valid || false);
+
+        // Store data in localStorage
+        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("userRole", roleId.toString());
+        if (response.expiry_date)
+          localStorage.setItem("expiryDate", response.expiry_date);
+        localStorage.setItem(
+          "isAppValid",
+          (response.is_app_valid || false).toString()
+        );
+
+        toast.success("Signed in successfully");
+
+        // Redirect based on user role
+        if (roleId === 1) {
+          // Super Admin redirects to dashboard
+          navigate("/dashboard");
+        } else if (roleId === 2) {
+          // Other users (like Guests) redirect to workspace
+          navigate("/workspace");
+        }
+        return true;
       } else {
-        throw new Error(data.message || 'Failed to sign in');
+        toast.error(response.msg || "Failed to sign in");
+        return false;
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
-      toast.error(errorMessage);
-      console.error('Sign in error:', error);
-    } finally {
-      setLoading(false);
+      console.error("Login error:", error);
+      toast.error("Failed to sign in. Please check your credentials.");
+      return false;
     }
   };
 
-  const signup = async (name: string, email: string, password: string, mobile: string, gender: string) => {
+  const signup = async (userData: SignupRequest): Promise<boolean> => {
     try {
-      setLoading(true);
-      
-      // Make API call here
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_name: name,
-          user_email: email,
-          user_pwd: password,
-          user_mobile: mobile,
-          gender,
-          is_active: true,
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to sign up');
-      }
-      
-      if (data.success) {
-        toast.success('Signed up successfully. Please sign in.');
-        navigate('/signin');
+      const response = await authApi.signup(userData);
+
+      if (response.success) {
+        toast.success("Account created successfully. Please sign in.");
+        navigate("/signin");
+        return true;
       } else {
-        throw new Error(data.message || 'Failed to sign up');
+        toast.error(response.msg || "Failed to create account");
+        return false;
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sign up';
-      toast.error(errorMessage);
-      console.error('Sign up error:', error);
-    } finally {
-      setLoading(false);
+      console.error("Signup error:", error);
+      toast.error("Failed to create account. Please try again.");
+      return false;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('expiry_date');
     setUser(null);
-    setUserRole(1);
+    setUserRole(2); // Reset to GUEST
     setExpiryDate(null);
-    navigate('/signin');
+    setIsAppValid(true);
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("expiryDate");
+    localStorage.removeItem("isAppValid");
+    toast.success("Logged out successfully");
+    navigate("/signin");
   };
-
-  const updateUserData = (updatedUser: User) => {
+    const updateUserData = (updatedUser: User) => {
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   return (
-    <AuthContext.Provider value={{ user, userRole, expiryDate, signin, signup, logout, loading, updateUserData }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading,
+        userRole,
+        expiryDate,
+        isAppValid,
+        signin,
+        signup,
+        logout,
+        updateUserData
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};

@@ -863,21 +863,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const workspace = workspaces.find((w) => w.ws_id === workspaceId);
       const sessionId = workspace?.session_id || sessionIds[workspaceId];
 
-      // Check if there's a valid session and that there are documents or a URL
       if (!sessionId) {
         throw new Error("No session found. Please create a new workspace.");
       }
       
-      // Check session type - must be either 'pdf' or 'url' to proceed
       const sessionType = sessionTypes[workspaceId] || 'empty';
-      if (sessionType === 'empty') {
-        throw new Error("Upload a document or scrape a URL first");
-      }
 
-      // Send message to LLM API with session ID
       const response = await llmApi.query(message, sessionId);
 
-      // Add bot response
       const botMessage: ChatMessage = {
         id: uuidv4(),
         content: response.answer,

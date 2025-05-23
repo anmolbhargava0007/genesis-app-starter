@@ -1,26 +1,37 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Upload, FileText, ChevronDown, ChevronUp, Link } from "lucide-react";
+import {
+  Send,
+  Upload,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  Link,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ChatMessage, LLMSource } from "@/types/api";
-
+import SessionIndicator from "./SessionIndicator";
 interface ChatViewProps {
   workspaceId: number;
   onUploadClick: () => void;
   onUrlClick: () => void;
 }
 
-const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => {
+const ChatView = ({
+  workspaceId,
+  onUploadClick,
+  onUrlClick,
+}: ChatViewProps) => {
   const [showAll, setShowAll] = useState(false);
-  const { 
-    sendMessage, 
-    chatMessages, 
-    loading, 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const {
+    sendMessage,
+    chatMessages,
+    loading,
     currentSessionDocuments,
-    currentSessionType
+    currentSessionType,
   } = useWorkspace();
   const [query, setQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -30,19 +41,19 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
 
   // Determine if chat history exists
   const hasChatHistory = chatMessages[workspaceId]?.length > 0;
-  
+
   // Check session state
-  const isPdfSession = currentSessionType === 'pdf';
-  const isUrlSession = currentSessionType === 'url';
-  const isEmptySession = currentSessionType === 'empty';
+  const isPdfSession = currentSessionType === "pdf";
+  const isUrlSession = currentSessionType === "url";
+  const isEmptySession = currentSessionType === "empty";
 
   // Get domain name from URL for display
   const getWebsiteDomain = (url: string): string => {
     try {
       if (!url) return "";
-      if (!url.startsWith('http')) url = 'https://' + url;
+      if (!url.startsWith("http")) url = "https://" + url;
       const domain = new URL(url).hostname;
-      return domain.startsWith('www.') ? domain : 'www.' + domain;
+      return domain.startsWith("www.") ? domain : "www." + domain;
     } catch (e) {
       return url;
     }
@@ -51,7 +62,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
   // Get website display name
   const getScrapedWebsite = (): string => {
     if (!isUrlSession || currentSessionDocuments.length === 0) return "";
-    const url = currentSessionDocuments.find(doc => doc.startsWith('http'));
+    const url = currentSessionDocuments.find((doc) => doc.startsWith("http"));
     return url ? getWebsiteDomain(url) : "";
   };
 
@@ -69,22 +80,24 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
     return () => clearTimeout(timeout);
   }, [workspaceId, chatMessages]);
 
-  const handleSendMessage = async () => {
-    if (!query.trim()) return;
+const handleSendMessage = async () => {
+  if (!query.trim()) return;
 
-    if (isEmptySession) {
-      toast.warning("Upload a document or scrape a URL first");
-      return;
-    }
+  // Prevent sending if no session (PDF or URL) is active
+  if (!hasChatHistory && isEmptySession) {
+    toast.warning("First upload a PDF or scrape a URL before sending a message.");
+    return;
+  }
 
-    try {
-      await sendMessage(workspaceId, query);
-      setQuery("");
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      toast.error("Failed to send message");
-    }
-  };
+  try {
+    await sendMessage(workspaceId, query);
+    setQuery("");
+  } catch (error) {
+    console.error("Failed to send message:", error);
+    toast.error("Failed to send message");
+  }
+};
+
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -135,7 +148,7 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
             {sources.map((source) => (
               <div key={source.source_id} className="mb-2 last:mb-0">
                 <div className="flex items-center text-blue-400">
-                  {source.file.startsWith('http') ? (
+                  {source.file.startsWith("http") ? (
                     <Link className="h-4 w-4 mr-1" />
                   ) : (
                     <FileText className="h-4 w-4 mr-1" />
@@ -158,173 +171,115 @@ const ChatView = ({ workspaceId, onUploadClick, onUrlClick }: ChatViewProps) => 
 
   // Main JSX
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-grow overflow-y-auto p-4 space-y-6 bg-gray-900">
+    <div className="flex flex-col h-full bg-gray-950">
+      {/* Chat area */}
+      <div className="flex-grow overflow-y-auto px-4 py-6 space-y-6">
         {hasChatHistory ? (
-          <>
-            {filteredMessages.map((message) => (
+          filteredMessages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${
+                message.type === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
               <div
-                key={message.id}
-                className={`flex ${
-                  message.type === "user" ? "justify-end" : "justify-start"
+                className={`max-w-2xl px-5 py-4 rounded-2xl shadow-md text-sm leading-relaxed ${
+                  message.type === "user"
+                    ? "bg-gradient-to-br from-blue-600 to-blue-500 text-white"
+                    : "bg-gray-800 text-gray-100"
                 }`}
               >
-                <div
-                  className={`max-w-3xl rounded-lg p-4 ${
-                    message.type === "user"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-800 text-white"
-                  }`}
-                >
-                  <div className="whitespace-pre-wrap">{message.content}</div>
-                  {message.type === "bot" &&
-                    renderSources(message.sources, message.id)}
-                </div>
+                <div className="whitespace-pre-wrap">{message.content}</div>
+                {message.type === "bot" &&
+                  renderSources(message.sources, message.id)}
               </div>
-            ))}
-          </>
-        ) : isEmptySession ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
-            <FileText className="h-16 w-16 mb-4 text-gray-400" />
+            </div>
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
+            <FileText className="h-16 w-16 mb-4 text-gray-500" />
             <h2 className="text-2xl font-semibold mb-2">
               Start a conversation
             </h2>
-            <p className="max-w-md text-gray-400">
-              Ask questions about your documents or upload more files to
-              analyze.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
-            <FileText className="h-16 w-16 mb-4 text-gray-400" />
-            <h2 className="text-2xl font-semibold mb-2">
-              {isUrlSession ? "Website content ready" : "Document ready"}
-            </h2>
-            <p className="max-w-md text-gray-400">
-              {isUrlSession 
-                ? "Ask questions about the website content" 
-                : "Ask questions about your document"}
-            </p>
+
           </div>
         )}
 
-        {/* Loading Bot Message Animation */}
         {loading && (
           <div className="flex justify-start">
-            <div className="max-w-3xl rounded-lg p-4 bg-gray-800 text-white">
-              <div className="flex space-x-1 animate-pulse">
-                <div className="w-2 h-2 bg-white rounded-full" />
-                <div className="w-2 h-2 bg-white rounded-full" />
-                <div className="w-2 h-2 bg-white rounded-full" />
-              </div>
+            <div className="bg-gray-800 text-white px-5 py-3 rounded-xl animate-pulse flex gap-2">
+              <div className="w-2 h-2 rounded-full bg-white" />
+              <div className="w-2 h-2 rounded-full bg-white" />
+              <div className="w-2 h-2 rounded-full bg-white" />
             </div>
           </div>
         )}
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-gray-700 bg-gray-800 flex justify-start items-center">
-        <div className="flex flex-wrap md:flex-nowrap gap-6 items-center justify-center w-full max-w-6xl">
-          {/* Document/URL Session Info Section */}
-          {!isEmptySession && (
-            <div className="border-b border-gray-700 p-3 flex-shrink-0 bg-gray-800 w-full">
-              <div className="flex items-center mb-1">
-                {isUrlSession ? (
-                  <>
-                    <Link className="h-4 w-4 mr-2 text-[#A259FF]" />
-                    <span className="text-sm font-medium text-gray-300">
-                      Current Scraped Website: {getScrapedWebsite()}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 mr-2 text-[#A259FF]" />
-                    <span className="text-sm font-medium text-gray-300">
-                      Current Session Documents:
-                    </span>
-                  </>
-                )}
+      {/* Input area */}
+      {/* Input area */}
+      <div className="bg-gray-900 border-t border-gray-700 sticky bottom-0 z-10 px-4 py-3">
+        <div className="flex items-center gap-2 max-w-4xl mx-auto">
+          <Button onClick={() => setIsModalOpen(true)}>View Session</Button>
+          {isModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+              <div className="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-lg relative">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="absolute top-2 right-2 text-white hover:text-red-500"
+                >
+                  ✕
+                </button>
+                <SessionIndicator
+                  isUrlSession={isUrlSession}
+                  isPdfSession={isPdfSession}
+                  getScrapedWebsite={getScrapedWebsite}
+                  currentSessionDocuments={currentSessionDocuments}
+                />
               </div>
-
-              {isPdfSession && (
-                <>
-                  <div className="flex flex-wrap gap-2">
-                    {visibleDocs.map((doc, index) => (
-                      <div
-                        key={index}
-                        className="bg-gray-700 text-xs px-2 py-1 rounded flex items-center"
-                      >
-                        <span className="text-[#A259FF]">{doc}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {currentSessionDocuments.length > 3 && (
-                    <button
-                      onClick={() => setShowAll(!showAll)}
-                      className="mt-2 text-xs text-[#A259FF] hover:underline flex items-center"
-                    >
-                      {showAll ? "Show Less" : "Show More"}
-                      {showAll ? (
-                        <ChevronUp className="h-3 w-3 ml-1" />
-                      ) : (
-                        <ChevronDown className="h-3 w-3 ml-1" />
-                      )}
-                    </button>
-                  )}
-                </>
-              )}
             </div>
           )}
 
-          <div className="flex items-center gap-3 flex-1">
-            {/* Only show upload/URL buttons if no history and no documents/URLs */}
-            {isEmptySession && !hasChatHistory && (
-              <>
-                <Button
-                  type="button"
-                  onClick={onUploadClick}
-                  variant="ghost"
-                  className="text-gray-300 hover:text-white hover:bg-gray-700"
-                  title="Upload Document"
-                >
-                  <Upload className="h-5 w-5" />
-                </Button>
-                
-                <Button
-                  type="button"
-                  onClick={onUrlClick}
-                  variant="ghost"
-                  className="text-gray-300 hover:text-white hover:bg-gray-700"
-                  title="Scrape Website URL"
-                >
-                  <Link className="h-5 w-5" />
-                </Button>
-              </>
-            )}
+          {/* Upload PDF: Enabled unless URL session is active */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onUploadClick}
+            className="hover:bg-gray-700 text-gray-300"
+            disabled={isUrlSession}
+          >
+            <Upload />
+          </Button>
 
-            <Input
-              type="text"
-              placeholder={isUrlSession 
-                ? "Ask about the website content..." 
-                : "Ask about your documents..."}
-              className="flex-1 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus-visible:ring-[#A259FF]"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={loading}
-            />
+          {/* Scrape URL: Enabled only in empty session */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onUrlClick}
+            className="hover:bg-gray-700 text-gray-300"
+            disabled={isPdfSession || isUrlSession}
+          >
+            <Link />
+          </Button>
 
-            <Button
-              className="bg-[#A259FF] hover:bg-[#A259FF]/90 text-white"
-              onClick={handleSendMessage}
-              disabled={!query.trim() || loading || isEmptySession}
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Send
-            </Button>
-          </div>
+          <Input
+            placeholder="Ask something..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyPress}
+            className="flex-grow bg-gray-800 text-gray-100 border-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+          />
+
+          <Button
+            variant="default"
+            onClick={handleSendMessage}
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2 shadow-lg"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </div>
