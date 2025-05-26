@@ -39,6 +39,7 @@ export interface LLMSource {
 
 export interface LLMResponse {
   answer: string;
+  response_time_seconds?: number;
   sources: LLMSource[];
 }
 
@@ -64,6 +65,8 @@ export interface ChatPrompt {
   ws_id: number;
   user_id: number;
   session_id: string;
+  resp_time?: string;
+  sources?: string[];
   is_active: boolean;
   workspaces?: {
     ws_name: string;

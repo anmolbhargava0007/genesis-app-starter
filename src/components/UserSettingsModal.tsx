@@ -1,20 +1,14 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/context/AuthContext";
-import { authApi } from "@/services/authApi";
-import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -22,6 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "@/constants/api";
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -29,114 +26,109 @@ interface UserSettingsModalProps {
 }
 
 const UserSettingsModal = ({ isOpen, onClose }: UserSettingsModalProps) => {
-  const { user, updateUserData } = useAuth();
-  const [name, setName] = useState(user?.user_name || "");
-  const [email, setEmail] = useState(user?.user_email || "");
-  const [mobile, setMobile] = useState(user?.user_mobile || "");
-  const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER">(
-    (user?.gender as "MALE" | "FEMALE" | "OTHER") || "OTHER"
-  );
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user, updateUser } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    user_name: user?.user_name || "",
+    user_email: user?.user_email || "",
+    user_mobile: user?.user_mobile || "",
+    gender: user?.gender || "MALE",
+  });
 
-  // Update form values when user data changes
-  useEffect(() => {
-    if (user) {
-      setName(user.user_name || "");
-      setEmail(user.user_email || "");
-      setMobile(user.user_mobile || "");
-      setGender((user.gender as "MALE" | "FEMALE" | "OTHER") || "OTHER");
-    }
-  }, [user]);
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
-  const handleProfileUpdate = async () => {
+  const handleUpdateProfile = async () => {
     if (!user?.user_id) return;
 
     try {
-      setIsSubmitting(true);
+      setLoading(true);
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/user`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: user.user_id,
+          user_name: formData.user_name,
+          user_email: formData.user_email,
+          user_mobile: formData.user_mobile,
+          gender: formData.gender,
+          is_active: true,
+        }),
+      });
 
-      const updatedUser = {
-        user_id: user.user_id,
-        user_name: name,
-        user_email: email,
-        user_mobile: mobile,
-        gender,
-        is_active: true,
-      };
-
-      const response = await authApi.updateUser(updatedUser);
-
-      if (response.success) {
-        toast.success("Profile updated successfully");
-        if (updateUserData) {
-          updateUserData({
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Update user in context
+          updateUser({
             ...user,
-            user_name: name,
-            user_email: email,
-            user_mobile: mobile,
-            gender,
+            user_name: formData.user_name,
+            user_email: formData.user_email,
+            user_mobile: formData.user_mobile,
+            gender: formData.gender,
           });
+          toast.success("Profile updated successfully");
+          onClose();
+        } else {
+          toast.error(data.message || "Failed to update profile");
         }
       } else {
-        toast.error(response.message || "Failed to update profile");
+        toast.error("Failed to update profile");
       }
     } catch (error) {
-      console.error("Failed to update profile:", error);
+      console.error("Error updating profile:", error);
       toast.error("Failed to update profile");
     } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handlePasswordReset = async () => {
-    try {
-      setIsSubmitting(true);
-      
-      // Simple validation - should be enhanced in a real app
-      if (newPassword !== confirmPassword) {
-        toast.error("Passwords don't match");
-        return;
-      }
-
-      // Here you would add the API call to change password
-      // For now just show a success message
-      toast.success("Password change functionality will be implemented soon");
-    } catch (error) {
-      toast.error("Failed to change password");
-    } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   const handleForgotPassword = async () => {
+    if (!forgotPasswordEmail.trim()) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
     try {
-      setIsSubmitting(true);
-
-      if (!forgotEmail.trim()) {
-        toast.error("Please enter your email");
-        return;
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/signin-forgotpwd`, {
+      setLoading(true);
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/signin-forgotpwd`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          user_email: forgotPasswordEmail,
+        }),
       });
 
-      const data = await response.json();
-
-      // Since we can't actually send emails in this demo
-      toast.success("If this email exists, a password reset link has been sent");
-      setForgotEmail("");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          toast.success("Password reset instructions sent to your email");
+          setShowForgotPassword(false);
+          setForgotPasswordEmail("");
+        } else {
+          toast.error(data.message || "Failed to send password reset email");
+        }
+      } else {
+        toast.error("Failed to send password reset email");
+      }
     } catch (error) {
-      console.error("Failed to request password reset:", error);
-      toast.error("Failed to request password reset");
+      console.error("Error sending password reset:", error);
+      toast.error("Failed to send password reset email");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -145,153 +137,103 @@ const UserSettingsModal = ({ isOpen, onClose }: UserSettingsModalProps) => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>User Settings</DialogTitle>
-          <DialogDescription>
-            Manage your account settings and preferences
-          </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="password">Password</TabsTrigger>
-            <TabsTrigger value="forgot">Forgot Password</TabsTrigger>
-          </TabsList>
+        <div className="space-y-4 py-4">
+          {!showForgotPassword ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={formData.user_name}
+                  onChange={(e) => handleInputChange("user_name", e.target.value)}
+                  placeholder="Enter your name"
+                />
+              </div>
 
-          {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mobile">Mobile</Label>
-              <Input
-                id="mobile"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                placeholder="Your mobile number"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
-              <Select
-                value={gender}
-                onValueChange={(value) => setGender(value as "MALE" | "FEMALE" | "OTHER")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="MALE">Male</SelectItem>
-                  <SelectItem value="FEMALE">Female</SelectItem>
-                  <SelectItem value="OTHER">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <Button 
-              onClick={handleProfileUpdate} 
-              className="w-full bg-[#A259FF] hover:bg-[#A259FF]/90"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Updating..." : "Update Profile"}
-            </Button>
-          </TabsContent>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.user_email}
+                  onChange={(e) => handleInputChange("user_email", e.target.value)}
+                  placeholder="Enter your email"
+                />
+              </div>
 
-          {/* Password Change Tab */}
-          <TabsContent value="password" className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
-              <Input
-                id="current-password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Current password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="New password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm new password"
-              />
-            </div>
-            
-            <Button 
-              onClick={handlePasswordReset} 
-              className="w-full bg-[#A259FF] hover:bg-[#A259FF]/90"
-              disabled={isSubmitting || !currentPassword || !newPassword || !confirmPassword}
-            >
-              {isSubmitting ? "Changing..." : "Change Password"}
-            </Button>
-          </TabsContent>
+              <div className="space-y-2">
+                <Label htmlFor="mobile">Mobile</Label>
+                <Input
+                  id="mobile"
+                  value={formData.user_mobile}
+                  onChange={(e) => handleInputChange("user_mobile", e.target.value)}
+                  placeholder="Enter your mobile number"
+                />
+              </div>
 
-          {/* Forgot Password Tab */}
-          <TabsContent value="forgot" className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="forgot-email">Email Address</Label>
-              <Input
-                id="forgot-email"
-                type="email"
-                value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
-                placeholder="Enter your email"
-              />
-            </div>
-            
-            <Button 
-              onClick={handleForgotPassword} 
-              className="w-full bg-[#A259FF] hover:bg-[#A259FF]/90"
-              disabled={isSubmitting || !forgotEmail}
-            >
-              {isSubmitting ? "Sending..." : "Reset Password"}
-            </Button>
+              <div className="space-y-2">
+                <Label htmlFor="gender">Gender</Label>
+                <Select
+                  value={formData.gender}
+                  onValueChange={(value) => handleInputChange("gender", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MALE">Male</SelectItem>
+                    <SelectItem value="FEMALE">Female</SelectItem>
+                    <SelectItem value="OTHER">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="text-center text-sm text-gray-500 mt-2">
-              An email will be sent with instructions to reset your password
-            </div>
-          </TabsContent>
-        </Tabs>
+              <div className="flex justify-between space-x-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowForgotPassword(true)}
+                >
+                  Reset Password
+                </Button>
+                <div className="space-x-2">
+                  <Button variant="outline" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleUpdateProfile} disabled={loading}>
+                    {loading ? "Updating..." : "Update Profile"}
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">Email Address</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  value={forgotPasswordEmail}
+                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                />
+              </div>
 
-        <DialogFooter className="sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
-            Close
-          </Button>
-        </DialogFooter>
+              <div className="flex justify-between space-x-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowForgotPassword(false)}
+                >
+                  Back
+                </Button>
+                <Button onClick={handleForgotPassword} disabled={loading}>
+                  {loading ? "Sending..." : "Send Reset Email"}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

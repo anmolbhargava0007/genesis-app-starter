@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -288,14 +287,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
                 timestamp: Date.now() - 1000,
               };
 
-              // Create bot message
+              // Create bot message with sources from API
               const botMessage: ChatMessage = {
                 id: uuidv4(),
                 content: prompt.response_text,
                 type: "bot",
                 timestamp: Date.now(),
-                // Try to extract sources if available
-                sources: extractSourcesFromResponse(prompt.response_text),
+                sources: extractSourcesFromResponse(prompt.response_text, prompt.sources),
               };
 
               formattedMessages.push(userMessage, botMessage);
@@ -492,7 +490,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Helper function to try to extract source information from response text
-  const extractSourcesFromResponse = (responseText: string): any[] => {
+  const extractSourcesFromResponse = (responseText: string, sources?: any[]): any[] => {
     try {
       // Check if the response contains a JSON part with sources
       if (responseText.includes('"sources":')) {
@@ -502,7 +500,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           return JSON.parse(sourcesJson);
         }
       }
-      return [];
+      return sources || [];
     } catch (e) {
       console.error("Failed to extract sources from response:", e);
       return [];
