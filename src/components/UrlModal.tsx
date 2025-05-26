@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -32,9 +31,11 @@ const UrlModal = ({ isOpen, onClose }: UrlModalProps) => {
 
     // Check if this URL has already been scraped
     const normalizedUrl = url.toLowerCase().trim();
-    const isDuplicate = currentSessionDocuments.some(doc => {
-      return doc.toLowerCase() === normalizedUrl ||
-             doc.toLowerCase() === normalizedUrl.replace(/^https?:\/\//, '');
+    const isDuplicate = currentSessionDocuments.some((doc) => {
+      return (
+        doc.toLowerCase() === normalizedUrl ||
+        doc.toLowerCase() === normalizedUrl.replace(/^https?:\/\//, "")
+      );
     });
 
     if (isDuplicate) {
@@ -45,7 +46,6 @@ const UrlModal = ({ isOpen, onClose }: UrlModalProps) => {
     try {
       setProcessing(true);
 
-      // Use the scrapeUrl method from context instead of direct API call
       const success = await scrapeUrl(url);
 
       if (success) {
@@ -62,7 +62,6 @@ const UrlModal = ({ isOpen, onClose }: UrlModalProps) => {
     }
   };
 
-  // Reset URL when modal opens or closes
   React.useEffect(() => {
     if (!isOpen) {
       setUrl("");
@@ -79,49 +78,55 @@ const UrlModal = ({ isOpen, onClose }: UrlModalProps) => {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="flex items-center space-x-2">
-            <Link className="h-4 w-4 text-[#A259FF]" />
-            <Input
-              type="url"
-              placeholder="https://example.com"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="flex-1"
-              disabled={processing}
-              autoFocus
-            />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleScrapeUrl();
+          }}
+        >
+          <div className="space-y-4 py-2">
+            <div className="flex items-center space-x-2">
+              <Link className="h-4 w-4 text-[#A259FF]" />
+              <Input
+                type="url"
+                placeholder="https://example.com"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="flex-1"
+                disabled={processing}
+                autoFocus
+              />
+            </div>
+            <div className="text-sm text-gray-500">
+              Enter a complete URL including the http:// or https:// prefix
+            </div>
           </div>
-          <div className="text-sm text-gray-500">
-            Enter a complete URL including the http:// or https:// prefix
-          </div>
-        </div>
 
-        <DialogFooter className="flex justify-between sm:justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={processing}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            className="bg-[#A259FF] hover:bg-[#A259FF]/90 text-white"
-            onClick={handleScrapeUrl}
-            disabled={!url.trim() || processing}
-          >
-            {processing ? (
-              <>
-                <span className="mr-2">Processing...</span>
-                <div className="animate-spin h-4 w-4 border-2 border-white border-opacity-50 border-t-white rounded-full" />
-              </>
-            ) : (
-              <>Scrape Website</>
-            )}
-          </Button>
-        </DialogFooter>
+          <DialogFooter className="flex justify-between sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={processing}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="bg-[#A259FF] hover:bg-[#A259FF]/90 text-white"
+              disabled={!url.trim() || processing}
+            >
+              {processing ? (
+                <>
+                  <span className="mr-2">Processing...</span>
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-opacity-50 border-t-white rounded-full" />
+                </>
+              ) : (
+                <>Scrape Website</>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

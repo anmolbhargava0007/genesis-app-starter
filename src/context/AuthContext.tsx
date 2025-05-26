@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useContext,
@@ -150,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUserData = (updatedUser: User) => {
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    localStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
   return (
@@ -165,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signin,
         signup,
         logout,
-        updateUserData
+        updateUserData,
       }}
     >
       {children}

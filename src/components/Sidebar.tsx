@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { WorkspaceWithDocuments } from "@/types/api";
@@ -54,13 +53,17 @@ const Sidebar = () => {
   const [historyWorkspaceId, setHistoryWorkspaceId] = useState<number | null>(
     null
   );
-  
+
   // Show workspace content only on the workspace route
   const showWorkspaceContent = location.pathname === "/workspace";
 
   // Determine if URL or PDF has been used in the current session
-  const hasPdfUploaded = currentSessionDocuments.some(doc => doc.endsWith('.pdf'));
-  const hasUrlScraped = currentSessionDocuments.some(doc => !doc.endsWith('.pdf') && doc.startsWith('http'));
+  const hasPdfUploaded = currentSessionDocuments.some((doc) =>
+    doc.endsWith(".pdf")
+  );
+  const hasUrlScraped = currentSessionDocuments.some(
+    (doc) => !doc.endsWith(".pdf") && doc.startsWith("http")
+  );
 
   const filteredWorkspaces = searchQuery
     ? workspaces.filter((ws) =>
@@ -112,7 +115,9 @@ const Sidebar = () => {
   };
 
   // Helper function to check if a workspace has chat history
-  const hasWorkspaceChatHistory = (workspaceId: number | undefined): boolean => {
+  const hasWorkspaceChatHistory = (
+    workspaceId: number | undefined
+  ): boolean => {
     if (!workspaceId) return false;
     return chatMessages[workspaceId]?.length > 0 || false;
   };
@@ -127,7 +132,7 @@ const Sidebar = () => {
       <div className="border-b border-gray-700 pb-2">
         <SidebarNav />
       </div>
-      
+
       {/* Only show workspace content when on the workspace route */}
       {showWorkspaceContent && (
         <>
@@ -162,11 +167,15 @@ const Sidebar = () => {
                 const wsId = workspace.ws_id || 0;
                 const hasHistory = hasWorkspaceChatHistory(wsId);
                 const isSelected = selectedWorkspace?.ws_id === wsId;
-                
+
                 // Determine if workspace has URL or PDF content based on chat history or current session
-                const workspaceHasPdf = isSelected ? hasPdfUploaded : workspace.documents?.length > 0;
-                const workspaceHasUrl = isSelected ? hasUrlScraped : hasHistory && !workspaceHasPdf;
-                
+                const workspaceHasPdf = isSelected
+                  ? hasPdfUploaded
+                  : workspace.documents?.length > 0;
+                const workspaceHasUrl = isSelected
+                  ? hasUrlScraped
+                  : hasHistory && !workspaceHasPdf;
+
                 return (
                   <div
                     key={wsId}
@@ -181,17 +190,13 @@ const Sidebar = () => {
                       {workspaceHasUrl ? (
                         <Link
                           className={`h-4 w-4 mt-0.5 ${
-                            isSelected
-                              ? "text-[#A259FF]"
-                              : "text-gray-400"
+                            isSelected ? "text-[#A259FF]" : "text-gray-400"
                           }`}
                         />
                       ) : (
                         <FileText
                           className={`h-4 w-4 mt-0.5 ${
-                            isSelected
-                              ? "text-[#A259FF]"
-                              : "text-gray-400"
+                            isSelected ? "text-[#A259FF]" : "text-gray-400"
                           }`}
                         />
                       )}
@@ -200,8 +205,8 @@ const Sidebar = () => {
                           {workspace.ws_name}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          {workspaceHasUrl 
-                            ? "Web Content" 
+                          {workspaceHasUrl
+                            ? "Web Content"
                             : `${workspace.documents?.length || 0} files`}
                         </p>
                       </div>
@@ -218,7 +223,6 @@ const Sidebar = () => {
                         <History className="h-4 w-4" />
                       </Button>
 
-                      {/* URL Button - disabled if PDF is uploaded or history exists */}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -229,7 +233,6 @@ const Sidebar = () => {
                         <Link className="h-4 w-4" />
                       </Button>
 
-                      {/* Upload Button - disabled if URL is scraped or history exists */}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -314,7 +317,7 @@ const Sidebar = () => {
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
       />
-      
+
       <UrlModal
         isOpen={isUrlModalOpen}
         onClose={() => setIsUrlModalOpen(false)}
