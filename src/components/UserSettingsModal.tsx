@@ -26,7 +26,7 @@ interface UserSettingsModalProps {
 }
 
 const UserSettingsModal = ({ isOpen, onClose }: UserSettingsModalProps) => {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -69,14 +69,6 @@ const UserSettingsModal = ({ isOpen, onClose }: UserSettingsModalProps) => {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          // Update user in context
-          updateUser({
-            ...user,
-            user_name: formData.user_name,
-            user_email: formData.user_email,
-            user_mobile: formData.user_mobile,
-            gender: formData.gender,
-          });
           toast.success("Profile updated successfully");
           onClose();
         } else {

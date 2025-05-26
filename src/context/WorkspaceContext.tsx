@@ -287,13 +287,23 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
                 timestamp: Date.now() - 1000,
               };
 
+              // Parse sources from prompt API response
+              const parsedSources = Array.isArray(prompt.sources) 
+                ? prompt.sources.map((source: string, index: number) => ({
+                    source_id: uuidv4(),
+                    summary: source,
+                    file: source.includes('http') ? source.split(' ')[1] || source : source.match(/(\w+\.pdf)/)?.[1] || `document_${index}`,
+                    page: source.includes('page') ? parseInt(source.match(/page (\d+)/)?.[1] || '1') : undefined,
+                  }))
+                : [];
+
               // Create bot message with sources from API
               const botMessage: ChatMessage = {
                 id: uuidv4(),
                 content: prompt.response_text,
                 type: "bot",
                 timestamp: Date.now(),
-                sources: extractSourcesFromResponse(prompt.response_text, prompt.sources),
+                sources: parsedSources,
               };
 
               formattedMessages.push(userMessage, botMessage);
@@ -386,14 +396,23 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
                 timestamp: Date.now() - 1000,
               };
 
+              // Parse sources from prompt API response
+              const parsedSources = Array.isArray(p.sources) 
+                ? p.sources.map((source: string, index: number) => ({
+                    source_id: uuidv4(),
+                    summary: source,
+                    file: source.includes('http') ? source.split(' ')[1] || source : source.match(/(\w+\.pdf)/)?.[1] || `document_${index}`,
+                    page: source.includes('page') ? parseInt(source.match(/page (\d+)/)?.[1] || '1') : undefined,
+                  }))
+                : [];
+
               // Create bot message
               const botMessage: ChatMessage = {
                 id: uuidv4(),
                 content: p.response_text,
                 type: "bot",
                 timestamp: Date.now(),
-                // Try to extract sources if available
-                sources: extractSourcesFromResponse(p.response_text),
+                sources: parsedSources,
               };
 
               formattedMessages.push(userMessage, botMessage);
@@ -905,7 +924,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         };
       });
 
-      // Save the chat history to the API
+      // Save the chat history to the API with response time and sources
       try {
         const promptData: ChatPrompt = {
           prompt_text: message,
@@ -916,6 +935,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           ws_id: workspaceId,
           user_id: user.user_id,
           session_id: sessionId,
+          resp_time: response.response_time_seconds?.toString() || "0.0",
+          sources: response.sources?.map(source => source.summary) || [],
           is_active: true,
         };
 
