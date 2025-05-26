@@ -225,7 +225,6 @@ const Sidebar = () => {
                         className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
                         onClick={(e) => handleUrlClick(e)}
                         title="Scrape Website"
-                        disabled={isSelected && (workspaceHasPdf || workspaceHasUrl || hasHistory)}
                       >
                         <Link className="h-4 w-4" />
                       </Button>
@@ -237,7 +236,6 @@ const Sidebar = () => {
                         className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
                         onClick={(e) => handleUploadClick(e)}
                         title="Upload Document"
-                        disabled={isSelected && (workspaceHasUrl || workspaceHasPdf || hasHistory)}
                       >
                         <Upload className="h-4 w-4" />
                       </Button>

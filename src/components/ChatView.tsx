@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,11 @@ const ChatView = ({
     selectedWorkspace,
   } = useWorkspace();
   const [query, setQuery] = useState("");
+  const [queries, setQueries] = useState<Record<number, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [loadingMap, setLoadingMap] = useState<{
+    [workspaceId: string]: boolean;
+  }>({});
   const [expandedSources, setExpandedSources] = useState<
     Record<string, boolean>
   >({});
@@ -88,21 +91,59 @@ const ChatView = ({
     return () => clearTimeout(timeout);
   }, [workspaceId, chatMessages]);
 
-  const handleSendMessage = async () => {
-    if (!query.trim()) return;
+  const currentQuery = workspaceId ? queries[workspaceId] || "" : "";
 
-    // Allow sending if there are any documents in the session or if there's already chat history
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!workspaceId) return;
+    const value = e.target.value;
+    setQueries((prev) => ({
+      ...prev,
+      [workspaceId]: value,
+    }));
+  };
+
+  const handleSendMessage = async () => {
+    if (!workspaceId) return;
+
+    const currentQuery = queries[workspaceId] || "";
+
+    if (!currentQuery.trim()) return;
+
     if (!hasDocuments && !hasChatHistory) {
-      toast.warning("Please upload a PDF or scrape a URL before sending a message.");
+      toast.warning(
+        "Please upload a PDF or scrape a URL before sending a message."
+      );
       return;
     }
 
+    // Clear input immediately
+    setQueries((prev) => ({
+      ...prev,
+      [workspaceId]: "",
+    }));
+
+    // Set loading true for this workspace
+    setLoadingMap((prev) => ({
+      ...prev,
+      [workspaceId]: true,
+    }));
+
     try {
-      await sendMessage(workspaceId, query);
-      setQuery("");
+      await sendMessage(workspaceId, currentQuery);
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error("Failed to send message");
+
+      // Restore input on failure
+      setQueries((prev) => ({
+        ...prev,
+        [workspaceId]: currentQuery,
+      }));
+    } finally {
+      setLoadingMap((prev) => ({
+        ...prev,
+        [workspaceId]: false,
+      }));
     }
   };
 
@@ -211,7 +252,7 @@ const ChatView = ({
           </div>
         )}
 
-        {loading && (
+        {loadingMap[workspaceId] && (
           <div className="flex justify-start">
             <div className="bg-gray-800 text-white px-5 py-3 rounded-xl animate-pulse flex gap-2">
               <div className="w-2 h-2 rounded-full bg-white" />
@@ -229,7 +270,6 @@ const ChatView = ({
         <div className="flex items-center gap-2 max-w-4xl mx-auto">
           <Button onClick={() => setIsModalOpen(true)}>View Session</Button>
 
-          {/* PDF Upload Button - Always enabled */}
           <Button
             variant="ghost"
             size="icon"
@@ -239,7 +279,6 @@ const ChatView = ({
             <Upload />
           </Button>
 
-          {/* URL Scrape Button - Always enabled */}
           <Button
             variant="ghost"
             size="icon"
@@ -251,8 +290,8 @@ const ChatView = ({
 
           <Input
             placeholder="Ask something..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={queries[workspaceId] || ""}
+            onChange={handleInputChange}
             onKeyDown={handleKeyPress}
             className="flex-grow bg-gray-800 text-gray-100 border-none focus:ring-2 focus:ring-blue-500 rounded-xl"
           />
@@ -274,14 +313,14 @@ const ChatView = ({
           <DialogHeader>
             <DialogTitle>Current Session</DialogTitle>
           </DialogHeader>
-          
+
           <SessionIndicator
             isUrlSession={isUrlSession}
             isPdfSession={isPdfSession}
             getScrapedWebsite={getScrapedWebsite}
             currentSessionDocuments={currentSessionDocuments}
           />
-          
+
           <DialogFooter>
             <Button onClick={() => setIsModalOpen(false)}>Close</Button>
           </DialogFooter>

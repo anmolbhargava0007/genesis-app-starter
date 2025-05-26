@@ -11,25 +11,19 @@ const WorkspaceView = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
 
-  // Close modals when changing workspaces
   useEffect(() => {
     setIsUploadModalOpen(false);
     setIsUrlModalOpen(false);
   }, [selectedWorkspace?.ws_id]);
 
-  // Handle modal open based on session type
   const handleUploadClick = () => {
-    // Allow PDF uploads if no URL has been scraped
     if (currentSessionType !== 'url') {
       setIsUploadModalOpen(true);
     }
   };
 
   const handleUrlClick = () => {
-    // Only allow opening if no PDF has been uploaded and no URL has been scraped
-    if (currentSessionType !== 'pdf' && currentSessionType !== 'url') {
       setIsUrlModalOpen(true);
-    }
   };
 
   if (!selectedWorkspace) {
