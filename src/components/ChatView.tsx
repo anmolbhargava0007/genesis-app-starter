@@ -10,6 +10,7 @@ import {
   ChevronUp,
   Link,
   X,
+  ClipboardCopy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ChatMessage, LLMSource } from "@/types/api";
@@ -231,15 +232,29 @@ const ChatView = ({
               }`}
             >
               <div
-                className={`max-w-2xl px-5 py-4 rounded-2xl shadow-md text-sm leading-relaxed ${
+                className={`relative max-w-2xl px-5 py-4 rounded-2xl shadow-md text-sm leading-relaxed ${
                   message.type === "user"
                     ? "bg-gradient-to-br from-blue-600 to-blue-500 text-white"
                     : "bg-gray-800 text-gray-100"
                 }`}
               >
                 <div className="whitespace-pre-wrap">{message.content}</div>
-                {message.type === "bot" &&
-                  renderSources(message.sources, message.id)}
+
+                {message.type === "bot" && (
+                  <>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(message.content);
+                        toast.success("Response copied to clipboard");
+                      }}
+                      className="absolute top-2 right-2 text-gray-400 hover:text-white"
+                      title="Copy response"
+                    >
+                      <ClipboardCopy className="h-4 w-4" />
+                    </button>
+                    {renderSources(message.sources, message.id)}
+                  </>
+                )}
               </div>
             </div>
           ))
