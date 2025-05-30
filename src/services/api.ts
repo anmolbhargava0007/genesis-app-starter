@@ -15,7 +15,7 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 export const workspaceApi = {
   getAll: async (userId?: number): Promise<ApiResponse<Workspace[]>> => {
     const query = userId ? `?user_id=${userId}` : "";
-    const response = await fetch(`${API_BASE_URL}/api/v1/workspaces${query}`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/workspaces${query}&is_active=true`);
     return handleResponse<ApiResponse<Workspace[]>>(response);
   },
 

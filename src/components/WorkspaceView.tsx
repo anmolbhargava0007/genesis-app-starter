@@ -17,9 +17,7 @@ const WorkspaceView = () => {
   }, [selectedWorkspace?.ws_id]);
 
   const handleUploadClick = () => {
-    if (currentSessionType !== 'url') {
       setIsUploadModalOpen(true);
-    }
   };
 
   const handleUrlClick = () => {

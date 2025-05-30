@@ -23,44 +23,62 @@ const UrlModal = ({ isOpen, onClose }: UrlModalProps) => {
   const [url, setUrl] = useState<string>("");
   const [processing, setProcessing] = useState<boolean>(false);
 
-  const handleScrapeUrl = async () => {
-    if (!url.trim() || !selectedWorkspace?.session_id) {
-      toast.error("Please enter a valid URL");
-      return;
-    }
+const handleScrapeUrl = async () => {
+  let inputUrl = url.trim();
 
-    // Check if this URL has already been scraped
-    const normalizedUrl = url.toLowerCase().trim();
-    const isDuplicate = currentSessionDocuments.some((doc) => {
-      return (
-        doc.toLowerCase() === normalizedUrl ||
-        doc.toLowerCase() === normalizedUrl.replace(/^https?:\/\//, "")
-      );
-    });
+  // Add https:// if missing
+  if (!/^https?:\/\//i.test(inputUrl)) {
+    inputUrl = `https://${inputUrl}`;
+  }
 
-    if (isDuplicate) {
-      toast.warning("This URL has already been scraped");
-      return;
-    }
+  // Now validate the normalized URL
+  try {
+    new URL(inputUrl); // This will throw if not a valid URL
+  } catch (error) {
+    toast.error("Please enter a valid URL");
+    return;
+  }
 
-    try {
-      setProcessing(true);
+  if (!selectedWorkspace?.session_id) {
+    toast.error("No active workspace session");
+    return;
+  }
 
-      const success = await scrapeUrl(url);
+  const normalizedUrl = inputUrl;
 
-      if (success) {
-        toast.success("URL scraped successfully");
-        onClose();
-      } else {
-        toast.error("Failed to scrape URL");
-      }
-    } catch (error) {
-      console.error("Failed to scrape URL:", error);
+  // Check for duplicate
+  const isDuplicate = currentSessionDocuments.some((doc) => {
+    const docNormalized = doc.toLowerCase();
+    return (
+      docNormalized === normalizedUrl.toLowerCase() ||
+      docNormalized === normalizedUrl.toLowerCase().replace(/^https?:\/\//, "")
+    );
+  });
+
+  if (isDuplicate) {
+    toast.warning("This URL has already been scraped");
+    return;
+  }
+
+  try {
+    setProcessing(true);
+
+    const success = await scrapeUrl(normalizedUrl);
+
+    if (success) {
+      toast.success("URL scraped successfully");
+      onClose();
+    } else {
       toast.error("Failed to scrape URL");
-    } finally {
-      setProcessing(false);
     }
-  };
+  } catch (error) {
+    console.error("Failed to scrape URL:", error);
+    toast.error("Failed to scrape URL");
+  } finally {
+    setProcessing(false);
+  }
+};
+
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -88,7 +106,7 @@ const UrlModal = ({ isOpen, onClose }: UrlModalProps) => {
             <div className="flex items-center space-x-2">
               <Link className="h-4 w-4 text-[#A259FF]" />
               <Input
-                type="url"
+                type="text"
                 placeholder="https://example.com"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}

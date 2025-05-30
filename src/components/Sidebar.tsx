@@ -31,6 +31,7 @@ import logoWhite from "./../../public/icons/logo-white.png";
 import SidebarNav from "./SidebarNav";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "react-router-dom";
+import ConfirmDialog from "./DeleteModal";
 
 const Sidebar = () => {
   const location = useLocation();
@@ -55,6 +56,8 @@ const Sidebar = () => {
     null
   );
   const [isFreeTierModalOpen, setIsFreeTierModalOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] =
+    useState<WorkspaceWithDocuments | null>(null);
 
   // Show workspace content only on the workspace route
   const showWorkspaceContent = location.pathname === "/workspace";
@@ -93,14 +96,12 @@ const Sidebar = () => {
     setEditWorkspace(workspace);
   };
 
-  const handleDeleteClick = async (
+  const handleDeleteClick = (
     workspace: WorkspaceWithDocuments,
     e: React.MouseEvent
   ) => {
     e.stopPropagation();
-    if (workspace.ws_id) {
-      await deleteWorkspace(workspace.ws_id);
-    }
+    setConfirmDelete(workspace);
   };
 
   const handleUploadClick = (e: React.MouseEvent) => {
@@ -143,13 +144,13 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-800 border-r border-gray-700 w-72 overflow-hidden">
+    <div className="h-screen flex flex-col bg-gray-900 border-r border-gray-700 w-72 overflow-hidden">
       <div className="flex justify-center">
         <img src={logoWhite} alt="Logo" className="w-64 h-[85px] mx-auto p-1" />
       </div>
 
       {/* SidebarNav always rendered, regardless of role */}
-      <div className="border-b border-gray-700 pb-2">
+      <div className="border-b border-gray-900 pb-2">
         <SidebarNav />
       </div>
 
@@ -207,27 +208,42 @@ const Sidebar = () => {
                     }`}
                   >
                     <div className="flex items-start space-x-2">
-                      {workspaceHasUrl ? (
+                      {workspaceHasUrl && workspaceHasPdf ? (
+                        // If both file and URL are present
+                        <div className="flex items-center space-x-0.5">
+                          <FileText
+                            className={`h-4 w-4 mt-0.5 ${
+                              isSelected ? "text-[#A259FF]" : "text-gray-400"
+                            }`}
+                          />
+                          <Link
+                            className={`h-4 w-4 mt-0.5 ${
+                              isSelected ? "text-[#A259FF]" : "text-gray-400"
+                            }`}
+                          />
+                        </div>
+                      ) : workspaceHasUrl ? (
+                        // Only URL present
                         <Link
                           className={`h-4 w-4 mt-0.5 ${
                             isSelected ? "text-[#A259FF]" : "text-gray-400"
                           }`}
                         />
                       ) : (
+                        // Only file present
                         <FileText
                           className={`h-4 w-4 mt-0.5 ${
                             isSelected ? "text-[#A259FF]" : "text-gray-400"
                           }`}
                         />
                       )}
+
                       <div>
                         <p className="text-sm font-medium text-gray-200">
                           {workspace.ws_name}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          {workspaceHasUrl
-                            ? "Web Content"
-                            : `${workspace.documents?.length || 0} files`}
+                          {workspace.documents?.length || 0} files
                         </p>
                       </div>
                     </div>
@@ -315,10 +331,6 @@ const Sidebar = () => {
                 )}
               </span>
             </div>
-            <div className="flex items-center justify-between text-sm text-gray-300 py-1.5">
-              <span>Storage</span>
-              <span className="font-semibold">12.4MB</span>
-            </div>
           </div>
         </>
       )}
@@ -358,6 +370,23 @@ const Sidebar = () => {
         isOpen={isFreeTierModalOpen}
         onClose={() => setIsFreeTierModalOpen(false)}
       />
+
+      {confirmDelete && (
+        <ConfirmDialog
+          isOpen={!!confirmDelete}
+          onClose={() => setConfirmDelete(null)}
+          onConfirm={async () => {
+            if (confirmDelete.ws_id) {
+              await deleteWorkspace(confirmDelete.ws_id);
+            }
+            setConfirmDelete(null);
+          }}
+          title={`Delete "${confirmDelete.ws_name}"?`}
+          description="Are you sure you want to delete this workspace? This action cannot be undone."
+          confirmText="Delete"
+          cancelText="Cancel"
+        />
+      )}
     </div>
   );
 };

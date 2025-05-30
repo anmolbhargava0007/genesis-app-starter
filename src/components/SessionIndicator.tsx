@@ -40,7 +40,7 @@ export default function SessionIndicator({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-white">Session Documents</h2>
+      <h2 className="text-lg font-semibold text-white">Session Documents & URLs</h2>
       
       <div className="space-y-2 max-h-60 overflow-y-auto">
         {currentSessionDocuments.length === 0 ? (
