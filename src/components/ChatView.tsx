@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { ChatMessage, LLMSource } from "@/types/api";
 import SessionIndicator from "./SessionIndicator";
+import FreeTierModal from "./FreeTierModal";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/context/AuthContext";
 
 interface ChatViewProps {
   workspaceId: number;
@@ -36,6 +38,8 @@ const ChatView = ({
 }: ChatViewProps) => {
   const [showAll, setShowAll] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFreeTierModalOpen, setIsFreeTierModalOpen] = useState(false);
+  const { isAppValid } = useAuth();
   const {
     sendMessage,
     chatMessages,
@@ -103,7 +107,19 @@ const ChatView = ({
     }));
   };
 
+  const checkFreeTierAccess = (): boolean => {
+    if (!isAppValid) {
+      setIsFreeTierModalOpen(true);
+      return false;
+    }
+    return true;
+  };
+
   const handleSendMessage = async () => {
+    if (!checkFreeTierAccess()) {
+      return;
+    }
+
     if (!workspaceId) return;
 
     const currentQuery = queries[workspaceId] || "";
@@ -218,6 +234,18 @@ const ChatView = ({
     );
   };
 
+  const handleUploadClick = () => {
+    if (checkFreeTierAccess()) {
+      onUploadClick();
+    }
+  };
+
+  const handleUrlClick = () => {
+    if (checkFreeTierAccess()) {
+      onUrlClick();
+    }
+  };
+
   // Main JSX
   return (
     <div className="flex flex-col h-full bg-gray-950">
@@ -288,7 +316,7 @@ const ChatView = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={onUploadClick}
+            onClick={handleUploadClick}
             className="hover:bg-gray-700 text-gray-300"
           >
             <Upload />
@@ -297,7 +325,7 @@ const ChatView = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={onUrlClick}
+            onClick={handleUrlClick}
             className="hover:bg-gray-700 text-gray-300"
           >
             <Link />
@@ -341,6 +369,11 @@ const ChatView = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <FreeTierModal
+        isOpen={isFreeTierModalOpen}
+        onClose={() => setIsFreeTierModalOpen(false)}
+      />
     </div>
   );
 };

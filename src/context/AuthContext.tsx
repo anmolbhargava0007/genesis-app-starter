@@ -63,13 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authApi.signin(credentials);
 
       if (response.success && response.data && response.data.length > 0) {
-        if (!response.is_app_valid) {
-          toast.error(
-            "You have consumed the free tier of Prototype, please connect with Product team to enable the features."
-          );
-          return false;
-        }
-
         const userData = response.data[0];
 
         // Set user role from response

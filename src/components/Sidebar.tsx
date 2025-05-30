@@ -26,6 +26,7 @@ import WorkspaceDialog from "./WorkspaceDialog";
 import UploadModal from "./UploadModal";
 import UrlModal from "./UrlModal";
 import ChatHistoryDialog from "./ChatHistoryDialog";
+import FreeTierModal from "./FreeTierModal";
 import logoWhite from "./../../public/icons/logo-white.png";
 import SidebarNav from "./SidebarNav";
 import { useAuth } from "@/context/AuthContext";
@@ -33,7 +34,7 @@ import { useLocation } from "react-router-dom";
 
 const Sidebar = () => {
   const location = useLocation();
-  const { userRole } = useAuth();
+  const { userRole, isAppValid } = useAuth();
   const {
     workspaces,
     selectedWorkspace,
@@ -53,6 +54,7 @@ const Sidebar = () => {
   const [historyWorkspaceId, setHistoryWorkspaceId] = useState<number | null>(
     null
   );
+  const [isFreeTierModalOpen, setIsFreeTierModalOpen] = useState(false);
 
   // Show workspace content only on the workspace route
   const showWorkspaceContent = location.pathname === "/workspace";
@@ -70,6 +72,14 @@ const Sidebar = () => {
         ws.ws_name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : workspaces;
+
+  const checkFreeTierAccess = (): boolean => {
+    if (!isAppValid) {
+      setIsFreeTierModalOpen(true);
+      return false;
+    }
+    return true;
+  };
 
   const handleWorkspaceClick = (workspace: WorkspaceWithDocuments) => {
     selectWorkspace(workspace);
@@ -95,12 +105,22 @@ const Sidebar = () => {
 
   const handleUploadClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsUploadModalOpen(true);
+    if (checkFreeTierAccess()) {
+      setIsUploadModalOpen(true);
+    }
   };
 
   const handleUrlClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsUrlModalOpen(true);
+    if (checkFreeTierAccess()) {
+      setIsUrlModalOpen(true);
+    }
+  };
+
+  const handleCreateWorkspaceClick = () => {
+    if (checkFreeTierAccess()) {
+      setCreateDialogOpen(true);
+    }
   };
 
   const handleHistoryClick = (
@@ -138,7 +158,7 @@ const Sidebar = () => {
         <>
           <div className="px-3 py-3">
             <Button
-              onClick={() => setCreateDialogOpen(true)}
+              onClick={handleCreateWorkspaceClick}
               className="w-full bg-[#A259FF] hover:bg-[#A259FF]/90 text-white rounded-md h-9 shadow-sm flex items-center justify-center"
             >
               <Plus className="h-4 w-4 mr-2" /> New Workspace
@@ -333,6 +353,11 @@ const Sidebar = () => {
           }}
         />
       )}
+
+      <FreeTierModal
+        isOpen={isFreeTierModalOpen}
+        onClose={() => setIsFreeTierModalOpen(false)}
+      />
     </div>
   );
 };
