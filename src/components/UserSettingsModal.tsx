@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { API_BASE_URL } from "@/constants/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 interface UserSettingsModalProps {
   isOpen: boolean;
