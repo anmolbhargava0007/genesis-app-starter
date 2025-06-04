@@ -1,394 +1,89 @@
 
-import React, { useState, useEffect } from "react";
-import { useWorkspace } from "@/context/WorkspaceContext";
-import { WorkspaceWithDocuments } from "@/types/api";
+import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Plus, FileText, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Folder,
-  FileText,
-  Plus,
-  Search,
-  MoreVertical,
-  Edit,
-  Trash2,
-  Upload,
-  History,
-  Link,
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import WorkspaceDialog from "./WorkspaceDialog";
-import UploadModal from "./UploadModal";
-import UrlModal from "./UrlModal";
-import ChatHistoryDialog from "./ChatHistoryDialog";
-import FreeTierModal from "./FreeTierModal";
-import logoWhite from "./../../public/icons/logo-white.png";
-import SidebarNav from "./SidebarNav";
-import { useAuth } from "@/context/AuthContext";
-import { useLocation } from "react-router-dom";
-import ConfirmDialog from "./DeleteModal";
 
 const Sidebar = () => {
+  const navigate = useNavigate();
   const location = useLocation();
-  const { userRole, isAppValid } = useAuth();
-  const {
-    workspaces,
-    selectedWorkspace,
-    selectWorkspace,
-    deleteWorkspace,
-    loadPromptHistory,
-    currentSessionDocuments,
-    chatMessages,
-  } = useWorkspace();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editWorkspace, setEditWorkspace] =
-    useState<WorkspaceWithDocuments | null>(null);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
-  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
-  const [historyWorkspaceId, setHistoryWorkspaceId] = useState<number | null>(
-    null
-  );
-  const [isFreeTierModalOpen, setIsFreeTierModalOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] =
-    useState<WorkspaceWithDocuments | null>(null);
+  const { workspaces, currentWorkspace, setCurrentWorkspace } = useWorkspace();
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
 
-  // Show workspace content on workspace routes (both /workspace and /workspace/:id)
-  const showWorkspaceContent = location.pathname.startsWith("/workspace");
-
-  // Determine if URL or PDF has been used in the current session
-  const hasPdfUploaded = currentSessionDocuments.some((doc) =>
-    doc.endsWith(".pdf")
-  );
-  const hasUrlScraped = currentSessionDocuments.some(
-    (doc) => !doc.endsWith(".pdf") && doc.startsWith("http")
-  );
-
-  const filteredWorkspaces = searchQuery
-    ? workspaces.filter((ws) =>
-        ws.ws_name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : workspaces;
-
-  const checkFreeTierAccess = (): boolean => {
-    if (!isAppValid) {
-      setIsFreeTierModalOpen(true);
-      return false;
-    }
-    return true;
+  const handleWorkspaceClick = (workspaceId: number) => {
+    setCurrentWorkspace(workspaceId);
+    navigate(`/workspace/${workspaceId}`);
   };
 
-  const handleWorkspaceClick = (workspace: WorkspaceWithDocuments) => {
-    selectWorkspace(workspace);
-  };
-
-  const handleEditClick = (
-    workspace: WorkspaceWithDocuments,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation();
-    setEditWorkspace(workspace);
-  };
-
-  const handleDeleteClick = (
-    workspace: WorkspaceWithDocuments,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation();
-    setConfirmDelete(workspace);
-  };
-
-  const handleUploadClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (checkFreeTierAccess()) {
-      setIsUploadModalOpen(true);
-    }
-  };
-
-  const handleUrlClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (checkFreeTierAccess()) {
-      setIsUrlModalOpen(true);
-    }
-  };
-
-  const handleCreateWorkspaceClick = () => {
-    if (checkFreeTierAccess()) {
-      setCreateDialogOpen(true);
-    }
-  };
-
-  const handleHistoryClick = (
-    workspace: WorkspaceWithDocuments,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation();
-    if (workspace.ws_id) {
-      setHistoryWorkspaceId(workspace.ws_id);
-      setIsHistoryDialogOpen(true);
-    }
-  };
-
-  // Helper function to check if a workspace has chat history
-  const hasWorkspaceChatHistory = (
-    workspaceId: number | undefined
-  ): boolean => {
-    if (!workspaceId) return false;
-    return chatMessages[workspaceId]?.length > 0 || false;
-  };
+  const isWorkspaceRoute = location.pathname.startsWith('/workspace/');
 
   return (
-    <div className="h-screen flex flex-col bg-sidebar border-r border-sidebar-border w-72 overflow-hidden">
-      <div className="flex justify-center">
-        <img src={logoWhite} alt="Logo" className="w-64 h-[85px] mx-auto p-1" />
-      </div>
-
-      {/* SidebarNav always rendered, regardless of role */}
-      <div className="border-b border-sidebar-border pb-2">
-        <SidebarNav />
-      </div>
-
-      {/* Show workspace content when on any workspace route */}
-      {showWorkspaceContent && (
-        <>
-          <div className="px-3 py-3">
+    <>
+      <div className="w-80 bg-card border-r border-border flex flex-col h-full">
+        {/* Header */}
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-card-foreground">Workspaces</h2>
             <Button
-              onClick={handleCreateWorkspaceClick}
-              className="w-full bg-[#A259FF] hover:bg-[#A259FF]/90 text-white rounded-md h-9 shadow-sm flex items-center justify-center"
+              size="sm"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="h-8 w-8 p-0"
             >
-              <Plus className="h-4 w-4 mr-2" /> New Workspace
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
+        </div>
 
-          <div className="px-3 mb-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-sidebar-foreground/60" />
-              <Input
-                placeholder="Search workspaces..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-sidebar-accent border-sidebar-border text-sidebar-foreground focus-visible:ring-[#A259FF] h-9 text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-3 py-2 min-h-0">
-            <div className="flex items-center text-sm font-medium text-sidebar-foreground/70 mb-2">
-              <Folder className="h-4 w-4 mr-2" /> WORKSPACES
-            </div>
-
-            <div className="space-y-1 mt-2">
-              {filteredWorkspaces.map((workspace) => {
-                const wsId = workspace.ws_id || 0;
-                const hasHistory = hasWorkspaceChatHistory(wsId);
-                const isSelected = selectedWorkspace?.ws_id === wsId;
-
-                // Determine if workspace has URL or PDF content based on chat history or current session
-                const workspaceHasPdf = isSelected
-                  ? hasPdfUploaded
-                  : workspace.documents?.length > 0;
-                const workspaceHasUrl = isSelected
-                  ? hasUrlScraped
-                  : hasHistory && !workspaceHasPdf;
-
-                return (
-                  <div
-                    key={wsId}
-                    onClick={() => handleWorkspaceClick(workspace)}
-                    className={`flex items-start justify-between p-2 rounded-md cursor-pointer group transition-colors duration-200 ${
-                      isSelected
-                        ? "bg-sidebar-accent border-l-4 border-[#A259FF]"
-                        : "hover:bg-sidebar-accent border-l-4 border-transparent"
-                    }`}
-                  >
-                    <div className="flex items-start space-x-2">
-                      {workspaceHasUrl && workspaceHasPdf ? (
-                        // If both file and URL are present
-                        <div className="flex items-center space-x-0.5">
-                          <FileText
-                            className={`h-4 w-4 mt-0.5 ${
-                              isSelected ? "text-[#A259FF]" : "text-sidebar-foreground/60"
-                            }`}
-                          />
-                          <Link
-                            className={`h-4 w-4 mt-0.5 ${
-                              isSelected ? "text-[#A259FF]" : "text-sidebar-foreground/60"
-                            }`}
-                          />
-                        </div>
-                      ) : workspaceHasUrl ? (
-                        // Only URL present
-                        <Link
-                          className={`h-4 w-4 mt-0.5 ${
-                            isSelected ? "text-[#A259FF]" : "text-sidebar-foreground/60"
-                          }`}
-                        />
-                      ) : (
-                        // Only file present
-                        <FileText
-                          className={`h-4 w-4 mt-0.5 ${
-                            isSelected ? "text-[#A259FF]" : "text-sidebar-foreground/60"
-                          }`}
-                        />
-                      )}
-
-                      <div>
-                        <p className="text-sm font-medium text-sidebar-foreground">
-                          {workspace.ws_name}
-                        </p>
-                        <p className="text-xs text-sidebar-foreground/60 mt-0.5">
-                          {workspace.documents?.length || 0} files
-                        </p>
-                      </div>
+        {/* Workspace List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {workspaces.map((workspace) => (
+            <div
+              key={workspace.ws_id}
+              className={`p-3 rounded-lg border cursor-pointer transition-colors hover:bg-accent/50 ${
+                currentWorkspace === workspace.ws_id
+                  ? "border-primary bg-accent"
+                  : "border-border bg-card hover:border-accent-foreground/20"
+              }`}
+              onClick={() => handleWorkspaceClick(workspace.ws_id!)}
+            >
+              <div className="flex items-start justify-between">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium text-card-foreground truncate">
+                    {workspace.ws_name}
+                  </h3>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <FileText className="h-3 w-3" />
+                      <span>{workspace.fileCount || 0}</span>
                     </div>
-
-                    <div className="flex items-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                        onClick={(e) => handleHistoryClick(workspace, e)}
-                        title="View History"
-                      >
-                        <History className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                        onClick={(e) => handleUrlClick(e)}
-                        title="Scrape Website"
-                      >
-                        <Link className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                        onClick={(e) => handleUploadClick(e)}
-                        title="Upload Document"
-                      >
-                        <Upload className="h-4 w-4" />
-                      </Button>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-40 bg-sidebar text-sidebar-foreground border-sidebar-border"
-                        >
-                          <DropdownMenuItem
-                            onClick={(e) => handleEditClick(workspace, e)}
-                            className="focus:bg-sidebar-accent focus:text-sidebar-foreground"
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            <span>Edit</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-sidebar-border" />
-                          <DropdownMenuItem
-                            className="text-red-400 focus:text-red-300 focus:bg-sidebar-accent"
-                            onClick={(e) => handleDeleteClick(workspace, e)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      <span>{workspace.messageCount || 0}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Footer Stats */}
-          <div className="mt-auto border-t border-sidebar-border p-3 bg-sidebar">
-            <div className="flex items-center justify-between text-sm text-sidebar-foreground py-1.5">
-              <div className="flex items-center">
-                <FileText className="h-4 w-4 mr-2 text-[#A259FF]" />
-                <span>Documents</span>
-              </div>
-              <span className="font-semibold">
-                {workspaces.reduce(
-                  (sum, ws) => sum + (ws.documents?.length || 0),
-                  0
+                </div>
+                {workspace.is_active && (
+                  <Badge variant="secondary" className="text-xs">
+                    Active
+                  </Badge>
                 )}
-              </span>
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          ))}
+        </div>
+      </div>
 
-      {/* Dialogs */}
       <WorkspaceDialog
-        isOpen={isCreateDialogOpen || !!editWorkspace}
-        onClose={() => {
-          setCreateDialogOpen(false);
-          setEditWorkspace(null);
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
         }}
-        workspace={editWorkspace}
       />
-
-      <UploadModal
-        isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
-      />
-
-      <UrlModal
-        isOpen={isUrlModalOpen}
-        onClose={() => setIsUrlModalOpen(false)}
-      />
-
-      {historyWorkspaceId && (
-        <ChatHistoryDialog
-          isOpen={isHistoryDialogOpen}
-          onClose={() => setIsHistoryDialogOpen(false)}
-          workspaceId={historyWorkspaceId}
-          onSelectPrompt={(prompt) => {
-            loadPromptHistory(prompt);
-          }}
-        />
-      )}
-
-      <FreeTierModal
-        isOpen={isFreeTierModalOpen}
-        onClose={() => setIsFreeTierModalOpen(false)}
-      />
-
-      {confirmDelete && (
-        <ConfirmDialog
-          isOpen={!!confirmDelete}
-          onClose={() => setConfirmDelete(null)}
-          onConfirm={async () => {
-            if (confirmDelete.ws_id) {
-              await deleteWorkspace(confirmDelete.ws_id);
-            }
-            setConfirmDelete(null);
-          }}
-          title={`Delete "${confirmDelete.ws_name}"?`}
-          description="Are you sure you want to delete this workspace? This action cannot be undone."
-          confirmText="Delete"
-          cancelText="Cancel"
-        />
-      )}
-    </div>
+    </>
   );
 };
 

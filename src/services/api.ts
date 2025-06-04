@@ -149,8 +149,9 @@ export const documentApi = {
 
 export const promptHistoryApi = {
   savePrompt: async (promptData: ChatPrompt): Promise<ApiResponse<ChatPrompt>> => {
+    const method = promptData.prompt_id ? "PUT" : "POST";
     const response = await fetch(`${API_BASE_URL}/api/v1/prompts`, {
-      method: "POST",
+      method,
       headers: {
         "Content-Type": "application/json",
       },

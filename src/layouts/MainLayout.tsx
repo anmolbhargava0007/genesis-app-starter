@@ -4,7 +4,6 @@ import Sidebar from "@/components/Sidebar";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
 import UserMenu from "@/components/UserMenu";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -26,7 +25,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               </h1>
             </div>
             <div className="flex items-center gap-4">
-              <ThemeToggle />
               {isAuthenticated && <UserMenu />}
             </div>
           </header>
