@@ -165,7 +165,7 @@ const EditUserDialog = ({
               )}
             />
 
-            <FormField
+            {/* <FormField
               control={form.control}
               name="gender"
               render={({ field }) => (
@@ -189,7 +189,7 @@ const EditUserDialog = ({
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> */}
 
             <FormField
               control={form.control}

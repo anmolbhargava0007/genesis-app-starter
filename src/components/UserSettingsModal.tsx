@@ -51,7 +51,7 @@ const UserSettingsModal = ({ isOpen, onClose }: UserSettingsModalProps) => {
     try {
       setLoading(true);
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/user`, {
+      const response = await fetch(`/api/v1/user`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -94,7 +94,7 @@ const UserSettingsModal = ({ isOpen, onClose }: UserSettingsModalProps) => {
     try {
       setLoading(true);
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/signin-forgotpwd`, {
+      const response = await fetch(`/api/v1/signin-forgotpwd`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -165,7 +165,7 @@ const UserSettingsModal = ({ isOpen, onClose }: UserSettingsModalProps) => {
                 />
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="gender">Gender</Label>
                 <Select
                   value={formData.gender}
@@ -180,7 +180,7 @@ const UserSettingsModal = ({ isOpen, onClose }: UserSettingsModalProps) => {
                     <SelectItem value="OTHER">Other</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </div> */}
 
               <div className="flex justify-between space-x-2 pt-4">
                 <Button

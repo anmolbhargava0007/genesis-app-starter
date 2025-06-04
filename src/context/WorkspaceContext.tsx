@@ -70,7 +70,7 @@ const SESSION_IDS_STORAGE_KEY = "workspace_session_ids";
 const SESSION_TYPES_STORAGE_KEY = "workspace_session_types";
 const SESSION_DOCUMENTS_STORAGE_KEY = "workspace_session_documents";
 
-export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
+export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [workspaces, setWorkspaces] = useState<WorkspaceWithDocuments[]>([]);
@@ -886,90 +886,100 @@ export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
     }
   };
 
-  const sendMessage = async (
-    workspaceId: number,
-    message: string
-  ): Promise<void> => {
-    const workspace = workspaces.find(w => w.ws_id === workspaceId);
-    if (!workspace?.session_id) {
-      throw new Error("No session found for this workspace");
-    }
-
-    const userId = 1; // TODO: Get from auth context
-    const timestamp = Date.now();
-    const userMessage: ChatMessage = {
-      id: `user-${timestamp}`,
-      content: message,
-      type: 'user',
-      timestamp: timestamp.toString(),
-    };
-
-    // Add user message to UI immediately
-    setChatMessages(prev => ({
-      ...prev,
-      [workspaceId]: [...(prev[workspaceId] || []), userMessage]
-    }));
-
+  const sendMessage = async (workspaceId: number, message: string): Promise<void> => {
     try {
-      // Step 1: Save prompt immediately with empty response
-      const initialPromptData = {
-        prompt_text: message,
-        response_text: "",
-        model_name: "llama3.2:latest",
-        temperature: 1.5,
-        token_usage: 200,
-        ws_id: workspaceId,
-        user_id: userId,
-        session_id: workspace.session_id,
-        resp_time: "0",
-        sources: [],
-        is_active: true
-      };
-
-      const promptResponse = await promptHistoryApi.savePrompt(initialPromptData);
-      const promptId = promptResponse.data?.prompt_id;
-
-      // Step 2: Get LLM response
-      const llmResponse = await llmApi.query(message, workspace.session_id);
-
-      // Step 3: Update prompt with response
-      if (promptId) {
-        const updatedPromptData = {
-          ...initialPromptData,
-          prompt_id: promptId,
-          response_text: llmResponse.answer,
-          sources: llmResponse.sources?.map(src => `Context: ${src.file} page ${src.page || 1}`) || []
-        };
-
-        await promptHistoryApi.savePrompt(updatedPromptData);
+      if (!user?.user_id) {
+        toast.error("User not authenticated");
+        return;
       }
-
-      const botMessage: ChatMessage = {
-        id: `bot-${timestamp + 1}`,
-        content: llmResponse.answer,
-        type: 'bot',
-        timestamp: (timestamp + 1).toString(),
-        sources: llmResponse.sources,
+  
+      setLoading(true);
+  
+      const userMessage: ChatMessage = {
+        id: uuidv4(),
+        content: message,
+        type: "user",
+        timestamp: Date.now(),
       };
-
-      // Add bot response to UI
-      setChatMessages(prev => ({
-        ...prev,
-        [workspaceId]: [...(prev[workspaceId] || []), botMessage]
-      }));
-
-    } catch (error) {
-      console.error('Error sending message:', error);
-      
-      // Remove user message on error
-      setChatMessages(prev => ({
-        ...prev,
-        [workspaceId]: (prev[workspaceId] || []).filter(msg => msg.id !== userMessage.id)
-      }));
-      
-      throw error;
+  
+      setChatMessages((prev) => {
+        const workspaceMessages = prev[workspaceId] || [];
+        return {
+          ...prev,
+          [workspaceId]: [...workspaceMessages, userMessage],
+        };
+      });
+  
+      // Get session ID for this workspace
+      const workspace = workspaces.find((w) => w.ws_id === workspaceId);
+      const sessionId = workspace?.session_id || sessionIds[workspaceId];
+  
+      if (!sessionId) {
+        throw new Error("No session found. Please create a new workspace.");
+      }
+  
+      const response = await llmApi.query(message, sessionId);
+  
+      const botMessage: ChatMessage = {
+        id: uuidv4(),
+        content: response.answer,
+        type: "bot",
+        timestamp: Date.now(),
+        sources: response.sources,
+      };
+  
+      setChatMessages((prev) => {
+        const workspaceMessages = prev[workspaceId] || [];
+        return {
+          ...prev,
+          [workspaceId]: [...workspaceMessages, botMessage],
+        };
+      });
+  
+      // Save the chat history to the API with response time and sources
+      try {
+        const promptData: ChatPrompt = {
+          prompt_text: message,
+          response_text: response.answer,
+          model_name: DEFAULT_MODEL_NAME,
+          temperature: DEFAULT_TEMPERATURE,
+          token_usage: DEFAULT_TOKEN_USAGE,
+          ws_id: workspaceId,
+          user_id: user.user_id,
+          session_id: sessionId,
+          resp_time: response.response_time_seconds?.toString() || "0.0",
+          sources: response.sources?.map(source => source.summary) || [],
+          is_active: true,
+        };
+  
+        await promptHistoryApi.savePrompt(promptData);
+      } catch (saveErr) {
+        console.error("Failed to save prompt history:", saveErr);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to send message";
+      setError(errorMessage);
+      toast.error(errorMessage);
+  
+      // Add error message as bot response
+      const errorBotMessage: ChatMessage = {
+        id: uuidv4(),
+        content: err instanceof Error ? err.message : "Sorry, I couldn't process your request. Please try again later.",
+        type: "bot",
+        timestamp: Date.now(),
+      };
+  
+      setChatMessages((prev) => {
+        const workspaceMessages = prev[workspaceId] || [];
+        return {
+          ...prev,
+          [workspaceId]: [...workspaceMessages, errorBotMessage],
+        };
+      });
+    } finally {
+      setLoading(false);
     }
-  };
+  };  
 
   const scrapeUrl = async (url: string): Promise<boolean> => {
     try {
@@ -1089,6 +1099,3 @@ export const useWorkspace = () => {
   return context;
 };
 
-interface WorkspaceProviderProps {
-  children: ReactNode;
-}

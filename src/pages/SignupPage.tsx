@@ -132,7 +132,7 @@ const SignupPage = () => {
             />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="gender"
                 render={({ field }) => (
@@ -156,7 +156,7 @@ const SignupPage = () => {
                     <FormMessage className="text-red-400" />
                   </FormItem>
                 )}
-              />
+              /> */}
               
               <FormField
                 control={form.control}

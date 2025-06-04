@@ -1,8 +1,9 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { Button } from "@/components/ui/button";
-import { Send, Upload, FileText, Link, ClipboardCopy, User, Bot } from "lucide-react";
+// remove the old Input import since we now use <textarea>
+// import { Input } from "@/components/ui/input";
+import { Send, Upload, FileText, Link, ClipboardCopy } from "lucide-react";
 import { toast } from "sonner";
 import { ChatMessage, LLMSource } from "@/types/api";
 import SessionIndicator from "./SessionIndicator";
@@ -45,6 +46,7 @@ const ChatView = ({
     Record<string, boolean>
   >({});
 
+  // NEW: textarea ref for auto-resize
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Determine if chat history exists
@@ -63,6 +65,7 @@ const ChatView = ({
     return () => clearTimeout(timeout);
   }, [workspaceId, chatMessages]);
 
+  // NEW: auto-resize function
   const autoResize = () => {
     if (inputRef.current) {
       inputRef.current.style.height = "auto";
@@ -70,6 +73,7 @@ const ChatView = ({
     }
   };
 
+  // Re-run autoResize when the query content changes
   useEffect(() => {
     autoResize();
   }, [queries[workspaceId]]);
@@ -103,7 +107,7 @@ const ChatView = ({
 
     // clear and show loading
     setQueries((prev) => ({ ...prev, [workspaceId]: "" }));
-    setLoadingMap((prev) => ({ ...prev, [workspaceId.toString()]: true }));
+    setLoadingMap((prev) => ({ ...prev, [workspaceId]: true }));
 
     try {
       await sendMessage(workspaceId, currentQuery);
@@ -113,7 +117,7 @@ const ChatView = ({
       // restore text
       setQueries((prev) => ({ ...prev, [workspaceId]: currentQuery }));
     } finally {
-      setLoadingMap((prev) => ({ ...prev, [workspaceId.toString()]: false }));
+      setLoadingMap((prev) => ({ ...prev, [workspaceId]: false }));
     }
   };
 
@@ -139,12 +143,12 @@ const ChatView = ({
     const isExpanded = expandedSources[messageId] || false;
 
     return (
-      <div className="mt-4 pt-3 border-t border-border/50">
+      <div className="mt-2">
         <button
           onClick={() => toggleSources(messageId)}
-          className="text-sm text-muted-foreground hover:text-foreground flex items-center transition-colors"
+          className="text-sm text-gray-500 hover:text-gray-300 flex items-center"
         >
-          <span>{isExpanded ? "Hide Citations" : "Show Citations"} ({sources.length})</span>
+          <span>{isExpanded ? "Hide Citations" : "Show Citations"}</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className={`h-4 w-4 ml-1 transition-transform ${
@@ -161,20 +165,20 @@ const ChatView = ({
           </svg>
         </button>
         {isExpanded && (
-          <div className="mt-3 space-y-3 p-4 border border-border rounded-lg bg-muted/30">
-            {sources.map((src, index) => (
-              <div key={src.source_id} className="border-l-2 border-primary/30 pl-3">
-                <div className="flex items-center text-primary">
+          <div className="mt-2 space-y-1 p-3 border border-gray-600 rounded-md bg-gray-800/50">
+            {sources.map((src) => (
+              <div key={src.source_id} className="mb-2 last:mb-0">
+                <div className="flex items-center text-blue-400">
                   {src.file.startsWith("http") ? (
-                    <Link className="h-4 w-4 mr-2" />
+                    <Link className="h-4 w-4 mr-1" />
                   ) : (
-                    <FileText className="h-4 w-4 mr-2" />
+                    <FileText className="h-4 w-4 mr-1" />
                   )}
                   <span className="text-sm font-medium">
-                    [{index + 1}] {src.file} {src.page && `(page ${src.page})`}
+                    {src.file} {src.page && `(page ${src.page})`}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{src.summary}</p>
+                <p className="text-sm text-gray-300 mt-1 pl-5">{src.summary}</p>
               </div>
             ))}
           </div>
@@ -190,85 +194,57 @@ const ChatView = ({
     if (checkFreeTierAccess()) onUrlClick();
   };
 
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return "";
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
   return (
-    <div className="flex flex-col h-full bg-gray-700 dark:bg-gray-700">
+    <div className="flex flex-col h-full bg-gray-800">
       {/* Chat messages */}
       <div className="flex-grow overflow-y-auto px-4 py-6 space-y-6">
         {hasChatHistory ? (
           filteredMessages.map((msg) => (
-            <div key={msg.id} className="space-y-1">
-              {/* Message header with timestamp */}
-              <div className={`flex items-center gap-2 ${
+            <div
+              key={msg.id}
+              className={`flex ${
                 msg.type === "user" ? "justify-end" : "justify-start"
-              }`}>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {msg.type === "user" ? (
-                    <>
-                      <span>You</span>
-                      <User className="h-3 w-3" />
-                    </>
-                  ) : (
-                    <>
-                      <Bot className="h-3 w-3" />
-                      <span>Assistant</span>
-                    </>
-                  )}
-                  <span>•</span>
-                  <span>{formatTimestamp(msg.timestamp)}</span>
-                </div>
-              </div>
-              
-              {/* Message content */}
-              <div className={`flex ${
-                msg.type === "user" ? "justify-end" : "justify-start"
-              }`}>
-                <div className={`relative max-w-3xl px-5 py-4 rounded-2xl text-sm leading-relaxed shadow-sm border ${
+              }`}
+            >
+              <div
+                className={`relative max-w-3xl px-5 py-4 rounded-2xl text-sm leading-relaxed ${
                   msg.type === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-card-foreground"
-                }`}>
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
-                  {msg.type === "bot" && (
-                    <>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(msg.content);
-                          toast.success("Response copied");
-                        }}
-                        className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors"
-                        title="Copy response"
-                      >
-                        <ClipboardCopy className="h-4 w-4" />
-                      </button>
-                      {renderSources(msg.sources, msg.id)}
-                    </>
-                  )}
-                </div>
+                    ? "bg-gradient-to-br from-blue-600 to-blue-500 text-white"
+                    : "bg-gray-800 text-gray-100"
+                } shadow-[0_-3px_6px_rgba(0,0,0,0.1),0_3px_6px_rgba(0,0,0,0.1),-3px_0_6px_rgba(0,0,0,0.1),3px_0_6px_rgba(0,0,0,0.1)]`}
+              >
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+                {msg.type === "bot" && (
+                  <>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(msg.content);
+                        toast.success("Response copied");
+                      }}
+                      className="absolute top-2 right-2 text-gray-400 hover:text-white"
+                      title="Copy response"
+                    >
+                      <ClipboardCopy className="h-4 w-4" />
+                    </button>
+                    {renderSources(msg.sources, msg.id)}
+                  </>
+                )}
               </div>
             </div>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <FileText className="h-16 w-16 mb-4 text-muted-foreground/50" />
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <FileText className="h-16 w-16 mb-4 text-gray-500" />
             <h2 className="text-2xl font-semibold">Start a conversation</h2>
-            <p className="text-sm mt-2">Upload documents or scrape URLs to begin</p>
           </div>
         )}
 
-        {loadingMap[workspaceId.toString()] && (
+        {loadingMap[workspaceId] && (
           <div className="flex justify-start">
-            <div className="bg-card text-card-foreground px-5 py-3 rounded-xl animate-pulse flex gap-2 border shadow-sm">
-              <div className="w-2 h-2 rounded-full bg-primary/50" />
-              <div className="w-2 h-2 rounded-full bg-primary/50" />
-              <div className="w-2 h-2 rounded-full bg-primary/50" />
+            <div className="bg-gray-800 text-white px-5 py-3 rounded-xl animate-pulse flex gap-2">
+              <div className="w-2 h-2 rounded-full bg-white" />
+              <div className="w-2 h-2 rounded-full bg-white" />
+              <div className="w-2 h-2 rounded-full bg-white" />
             </div>
           </div>
         )}
@@ -276,7 +252,7 @@ const ChatView = ({
       </div>
 
       {/* Input area */}
-      <div className="bg-muted/30 p-2 w-[80%] mx-auto flex flex-col gap-2 rounded-xl border border-border">
+      <div className="bg-gray-600 mb-2 p-2 w-[80%] mx-auto flex flex-col gap-2 rounded-xl">
         <div className="relative">
           <textarea
             ref={inputRef}
@@ -288,7 +264,7 @@ const ChatView = ({
               autoResize();
             }}
             onKeyDown={handleKeyPress}
-            className="w-full resize-none bg-transparent text-foreground border-none focus:outline-none focus:ring-0 rounded-xl px-4 py-3 min-h-[40px] max-h-48 overflow-y-auto placeholder:text-muted-foreground"
+            className="w-full resize-none bg-transparent text-gray-100 border-none focus:outline-none focus:ring-0 rounded-xl px-4 py-3 min-h-[40px] max-h-48 overflow-y-auto scroll-thin scrollbar-thumb-gray-700 scrollbar-track-transparent placeholder:text-gray-400"
           />
         </div>
 
@@ -298,8 +274,7 @@ const ChatView = ({
             <Button
               size="sm"
               onClick={() => setIsModalOpen(true)}
-              variant="secondary"
-              className="px-3 py-2 text-sm"
+              className="px-3 py-2 text-sm bg-gray-800 text-white hover:bg-gray-700 rounded-md"
             >
               Session info
             </Button>
@@ -307,7 +282,7 @@ const ChatView = ({
               variant="ghost"
               size="icon"
               onClick={handleUploadClick}
-              className="hover:bg-accent text-muted-foreground hover:text-foreground p-2"
+              className="hover:bg-gray-700 text-gray-300 p-2"
             >
               <Upload className="w-4 h-4" />
             </Button>
@@ -315,7 +290,7 @@ const ChatView = ({
               variant="ghost"
               size="icon"
               onClick={handleUrlClick}
-              className="hover:bg-accent text-muted-foreground hover:text-foreground p-2"
+              className="hover:bg-gray-700 text-gray-300 p-2"
             >
               <Link className="w-4 h-4" />
             </Button>
@@ -325,7 +300,7 @@ const ChatView = ({
             variant="default"
             onClick={handleSendMessage}
             disabled={loading}
-            className="rounded-xl px-4 py-2 shadow-md text-sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2 shadow-md text-sm"
           >
             <Send className="w-4 h-4" />
           </Button>
@@ -334,7 +309,7 @@ const ChatView = ({
 
       {/* Session Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-gray-900 text-white">
           <DialogHeader>
             <DialogTitle>Current Session</DialogTitle>
           </DialogHeader>
