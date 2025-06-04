@@ -37,6 +37,7 @@ const App = () => (
               <Route element={<AuthLayout protected withHeader />}>
                 <Route path="/dashboard" element={<MainLayout><DashboardContent /></MainLayout>} />
                 <Route path="/workspace" element={<MainLayout><WorkspaceContent /></MainLayout>} />
+                <Route path="/workspace/:wsId" element={<MainLayout><WorkspaceContent /></MainLayout>} />
                 <Route path="/usermanagement" element={<MainLayout><UserManagementContent /></MainLayout>} />
               </Route>
 

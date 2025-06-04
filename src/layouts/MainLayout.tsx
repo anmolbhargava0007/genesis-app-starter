@@ -4,9 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
 import UserMenu from "@/components/UserMenu";
-import { useTheme } from "@/context/ThemeContext";
-import { Sun, Moon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -14,7 +12,6 @@ interface MainLayoutProps {
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   const { isAuthenticated } = useAuth();
-  const { theme, setTheme } = useTheme();
 
   return (
     <WorkspaceProvider>
@@ -29,19 +26,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               </h1>
             </div>
             <div className="flex items-center gap-4">
-              {/* <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 w-8 px-0"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-4 w-4" />
-                ) : (
-                  <Moon className="h-4 w-4" />
-                )}
-                <span className="sr-only">Toggle theme</span>
-              </Button> */}
+              <ThemeToggle />
               {isAuthenticated && <UserMenu />}
             </div>
           </header>

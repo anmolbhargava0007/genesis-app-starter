@@ -5,6 +5,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Workspace,
@@ -70,6 +71,7 @@ const SESSION_TYPES_STORAGE_KEY = "workspace_session_types";
 const SESSION_DOCUMENTS_STORAGE_KEY = "workspace_session_documents";
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [workspaces, setWorkspaces] = useState<WorkspaceWithDocuments[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] =
@@ -195,7 +197,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           const hasUrls = docs.some(doc => doc.startsWith('http'));
           
           if (hasPdfs && hasUrls) {
-            type = 'pdf'; // Mixed type, default to 'pdf' for backwards compatibility
+            type = 'pdf'; // Mixed type defaults to 'pdf'
           } else if (hasPdfs) {
             type = 'pdf';
           } else if (hasUrls) {
@@ -556,6 +558,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           })
         );
 
+        // Sort workspaces by creation date (newest first)
+        transformed.sort((a, b) => {
+          if (a.ws_id && b.ws_id) {
+            return b.ws_id - a.ws_id;
+          }
+          return 0;
+        });
+
         for (const workspace of transformed) {
           try {
             if (workspace.ws_id) {
@@ -665,6 +675,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         toast.success("Workspace created successfully");
 
         await refreshWorkspaces();
+        
+        // Navigate to the newly created workspace
+        navigate(`/workspace/${workspaceData.ws_id}`);
       } else {
         toast.error("Failed to create workspace");
       }
@@ -747,6 +760,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const selectWorkspace = (workspace: WorkspaceWithDocuments) => {
     setSelectedWorkspace(workspace);
+    if (workspace.ws_id) {
+      navigate(`/workspace/${workspace.ws_id}`);
+    }
   };
 
   const uploadDocument = async (file: File): Promise<boolean> => {
