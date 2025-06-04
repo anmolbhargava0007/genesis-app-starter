@@ -11,14 +11,26 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 
 export function ThemeToggle() {
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+
+  const getThemeIcon = () => {
+    switch (theme) {
+      case "light":
+        return <Sun className="h-[1.2rem] w-[1.2rem]" />;
+      case "dark":
+        return <Moon className="h-[1.2rem] w-[1.2rem]" />;
+      case "system":
+        return <Monitor className="h-[1.2rem] w-[1.2rem]" />;
+      default:
+        return <Sun className="h-[1.2rem] w-[1.2rem]" />;
+    }
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="icon">
-          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          {getThemeIcon()}
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>

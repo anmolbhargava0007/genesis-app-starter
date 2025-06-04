@@ -59,8 +59,8 @@ const Sidebar = () => {
   const [confirmDelete, setConfirmDelete] =
     useState<WorkspaceWithDocuments | null>(null);
 
-  // Show workspace content only on the workspace route
-  const showWorkspaceContent = location.pathname === "/workspace";
+  // Show workspace content on workspace routes (both /workspace and /workspace/:id)
+  const showWorkspaceContent = location.pathname.startsWith("/workspace");
 
   // Determine if URL or PDF has been used in the current session
   const hasPdfUploaded = currentSessionDocuments.some((doc) =>
@@ -154,7 +154,7 @@ const Sidebar = () => {
         <SidebarNav />
       </div>
 
-      {/* Only show workspace content when on the workspace route */}
+      {/* Show workspace content when on any workspace route */}
       {showWorkspaceContent && (
         <>
           <div className="px-3 py-3">

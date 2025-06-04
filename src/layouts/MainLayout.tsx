@@ -15,13 +15,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   return (
     <WorkspaceProvider>
-      <div className="flex h-screen bg-background">
+      <div className="flex h-screen bg-background text-foreground">
         <Sidebar />
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="sticky top-0 z-20 border-b border-gray-700 p-4 bg-gray-800 shadow-sm flex items-center justify-between">
+          <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 shadow-sm flex items-center justify-between">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <h1 className="text-2xl font-semibold text-white">
+              <h1 className="text-2xl font-semibold">
                 {/* <span className="text-[#A259FF]">SalesAdvisor</span> */}
               </h1>
             </div>
@@ -31,7 +31,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto bg-background">
             {children}
           </div>
         </div>
