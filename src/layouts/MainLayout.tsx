@@ -15,13 +15,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   return (
     <WorkspaceProvider>
-      <div className="flex h-screen bg-background text-foreground">
+      <div className="flex h-screen w-full bg-background text-foreground">
         <Sidebar />
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 shadow-sm flex items-center justify-between">
+          <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 shadow-sm flex items-center justify-between">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <h1 className="text-2xl font-semibold">
+              <h1 className="text-2xl font-semibold text-foreground">
                 {/* <span className="text-[#A259FF]">SalesAdvisor</span> */}
               </h1>
             </div>
