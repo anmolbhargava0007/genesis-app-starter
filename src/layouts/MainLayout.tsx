@@ -19,7 +19,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         <Sidebar />
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 shadow-sm flex items-center justify-between">
+          <header className="sticky top-0 z-20 border-b border-border bg-gray-700 dark:bg-gray-700 backdrop-blur supports-[backdrop-filter]:bg-gray-700/90 dark:supports-[backdrop-filter]:bg-gray-700/90 p-4 shadow-sm flex items-center justify-between">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <h1 className="text-2xl font-semibold text-foreground">
                 {/* <span className="text-[#A259FF]">SalesAdvisor</span> */}
@@ -31,7 +31,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto bg-background">
+          <div className="flex-1 overflow-y-auto bg-gray-700 dark:bg-gray-700">
             {children}
           </div>
         </div>

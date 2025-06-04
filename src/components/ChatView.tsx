@@ -103,7 +103,7 @@ const ChatView = ({
 
     // clear and show loading
     setQueries((prev) => ({ ...prev, [workspaceId]: "" }));
-    setLoadingMap((prev) => ({ ...prev, [workspaceId]: true }));
+    setLoadingMap((prev) => ({ ...prev, [workspaceId.toString()]: true }));
 
     try {
       await sendMessage(workspaceId, currentQuery);
@@ -113,7 +113,7 @@ const ChatView = ({
       // restore text
       setQueries((prev) => ({ ...prev, [workspaceId]: currentQuery }));
     } finally {
-      setLoadingMap((prev) => ({ ...prev, [workspaceId]: false }));
+      setLoadingMap((prev) => ({ ...prev, [workspaceId.toString()]: false }));
     }
   };
 
@@ -199,7 +199,7 @@ const ChatView = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-gray-700 dark:bg-gray-700">
       {/* Chat messages */}
       <div className="flex-grow overflow-y-auto px-4 py-6 space-y-6">
         {hasChatHistory ? (
@@ -263,7 +263,7 @@ const ChatView = ({
           </div>
         )}
 
-        {loadingMap[workspaceId] && (
+        {loadingMap[workspaceId.toString()] && (
           <div className="flex justify-start">
             <div className="bg-card text-card-foreground px-5 py-3 rounded-xl animate-pulse flex gap-2 border shadow-sm">
               <div className="w-2 h-2 rounded-full bg-primary/50" />

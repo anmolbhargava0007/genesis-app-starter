@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { WorkspaceWithDocuments } from "@/types/api";
@@ -144,13 +145,13 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900 border-r border-gray-700 w-72 overflow-hidden">
+    <div className="h-screen flex flex-col bg-sidebar border-r border-sidebar-border w-72 overflow-hidden">
       <div className="flex justify-center">
         <img src={logoWhite} alt="Logo" className="w-64 h-[85px] mx-auto p-1" />
       </div>
 
       {/* SidebarNav always rendered, regardless of role */}
-      <div className="border-b border-gray-900 pb-2">
+      <div className="border-b border-sidebar-border pb-2">
         <SidebarNav />
       </div>
 
@@ -168,18 +169,18 @@ const Sidebar = () => {
 
           <div className="px-3 mb-2">
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-sidebar-foreground/60" />
               <Input
                 placeholder="Search workspaces..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-gray-700 border-gray-600 text-gray-200 focus-visible:ring-[#A259FF] h-9 text-sm"
+                className="pl-9 bg-sidebar-accent border-sidebar-border text-sidebar-foreground focus-visible:ring-[#A259FF] h-9 text-sm"
               />
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-3 py-2 min-h-0">
-            <div className="flex items-center text-sm font-medium text-gray-400 mb-2">
+            <div className="flex items-center text-sm font-medium text-sidebar-foreground/70 mb-2">
               <Folder className="h-4 w-4 mr-2" /> WORKSPACES
             </div>
 
@@ -203,8 +204,8 @@ const Sidebar = () => {
                     onClick={() => handleWorkspaceClick(workspace)}
                     className={`flex items-start justify-between p-2 rounded-md cursor-pointer group transition-colors duration-200 ${
                       isSelected
-                        ? "bg-gray-700 border-l-4 border-[#A259FF]"
-                        : "hover:bg-gray-700 border-l-4 border-transparent"
+                        ? "bg-sidebar-accent border-l-4 border-[#A259FF]"
+                        : "hover:bg-sidebar-accent border-l-4 border-transparent"
                     }`}
                   >
                     <div className="flex items-start space-x-2">
@@ -213,12 +214,12 @@ const Sidebar = () => {
                         <div className="flex items-center space-x-0.5">
                           <FileText
                             className={`h-4 w-4 mt-0.5 ${
-                              isSelected ? "text-[#A259FF]" : "text-gray-400"
+                              isSelected ? "text-[#A259FF]" : "text-sidebar-foreground/60"
                             }`}
                           />
                           <Link
                             className={`h-4 w-4 mt-0.5 ${
-                              isSelected ? "text-[#A259FF]" : "text-gray-400"
+                              isSelected ? "text-[#A259FF]" : "text-sidebar-foreground/60"
                             }`}
                           />
                         </div>
@@ -226,23 +227,23 @@ const Sidebar = () => {
                         // Only URL present
                         <Link
                           className={`h-4 w-4 mt-0.5 ${
-                            isSelected ? "text-[#A259FF]" : "text-gray-400"
+                            isSelected ? "text-[#A259FF]" : "text-sidebar-foreground/60"
                           }`}
                         />
                       ) : (
                         // Only file present
                         <FileText
                           className={`h-4 w-4 mt-0.5 ${
-                            isSelected ? "text-[#A259FF]" : "text-gray-400"
+                            isSelected ? "text-[#A259FF]" : "text-sidebar-foreground/60"
                           }`}
                         />
                       )}
 
                       <div>
-                        <p className="text-sm font-medium text-gray-200">
+                        <p className="text-sm font-medium text-sidebar-foreground">
                           {workspace.ws_name}
                         </p>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-sidebar-foreground/60 mt-0.5">
                           {workspace.documents?.length || 0} files
                         </p>
                       </div>
@@ -252,7 +253,7 @@ const Sidebar = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                         onClick={(e) => handleHistoryClick(workspace, e)}
                         title="View History"
                       >
@@ -262,7 +263,7 @@ const Sidebar = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                         onClick={(e) => handleUrlClick(e)}
                         title="Scrape Website"
                       >
@@ -272,7 +273,7 @@ const Sidebar = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                         onClick={(e) => handleUploadClick(e)}
                         title="Upload Document"
                       >
@@ -284,25 +285,25 @@ const Sidebar = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-gray-600"
+                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                           >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="w-40 bg-gray-800 text-gray-200 border-gray-700"
+                          className="w-40 bg-sidebar text-sidebar-foreground border-sidebar-border"
                         >
                           <DropdownMenuItem
                             onClick={(e) => handleEditClick(workspace, e)}
-                            className="focus:bg-gray-700 focus:text-white"
+                            className="focus:bg-sidebar-accent focus:text-sidebar-foreground"
                           >
                             <Edit className="mr-2 h-4 w-4" />
                             <span>Edit</span>
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-gray-700" />
+                          <DropdownMenuSeparator className="bg-sidebar-border" />
                           <DropdownMenuItem
-                            className="text-red-400 focus:text-red-300 focus:bg-gray-700"
+                            className="text-red-400 focus:text-red-300 focus:bg-sidebar-accent"
                             onClick={(e) => handleDeleteClick(workspace, e)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -318,8 +319,8 @@ const Sidebar = () => {
           </div>
 
           {/* Footer Stats */}
-          <div className="mt-auto border-t border-gray-700 p-3 bg-gray-800">
-            <div className="flex items-center justify-between text-sm text-gray-300 py-1.5">
+          <div className="mt-auto border-t border-sidebar-border p-3 bg-sidebar">
+            <div className="flex items-center justify-between text-sm text-sidebar-foreground py-1.5">
               <div className="flex items-center">
                 <FileText className="h-4 w-4 mr-2 text-[#A259FF]" />
                 <span>Documents</span>
